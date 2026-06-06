@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>オープンスクール申込状況 | 梅光学院中学校・高等学校</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/variables.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="dashboard-wrapper">
+
+  <!-- HEADER -->
+  <header class="dashboard-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <img src="assets/img/emblem.png" alt="梅光学院" class="header-logo">
+        <div class="header-title">
+          <span class="header-school">梅光学院中学校・高等学校</span>
+          <span class="header-subtitle">オープンスクール 申込状況ダッシュボード</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="header-badge">生徒・保護者向け</span>
+        <button class="btn btn-secondary btn-sm" onclick="window.print()">印刷</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+
+    <!-- Section 1: Progress Cards -->
+    <section>
+      <div class="section-header">
+        <h2 class="section-title">申込状況サマリー</h2>
+      </div>
+      <div class="progress-grid">
+        <div id="card-0725" class="progress-card" onclick="switchEvent('0725')">
+          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
+        </div>
+        <div id="card-0829" class="progress-card" onclick="switchEvent('0829')">
+          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
+        </div>
+        <div id="card-1107" class="progress-card" onclick="switchEvent('1107')">
+          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
+        </div>
+        <div id="card-1128" class="progress-card" onclick="switchEvent('1128')">
+          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Event Detail Tabs -->
+    <section class="event-tab-section">
+
+      <!-- Desktop tabs -->
+      <div id="event-tab-nav" class="tab-nav event-tab-nav-desktop">
+        <button class="tab-btn event-tab-btn active" data-key="0725" onclick="switchEvent('0725')">7月25日</button>
+        <button class="tab-btn event-tab-btn" data-key="0829" onclick="switchEvent('0829')">8月29日</button>
+        <button class="tab-btn event-tab-btn" data-key="1107" onclick="switchEvent('1107')">11月7日</button>
+        <button class="tab-btn event-tab-btn" data-key="1128" onclick="switchEvent('1128')">11月28日</button>
+      </div>
+
+      <!-- Mobile dropdown -->
+      <select id="event-select-dropdown" class="event-select-dropdown"></select>
+
+      <!-- Phase tabs -->
+      <div class="phase-tab-nav">
+        <button class="phase-tab-btn active" data-phase="before">📊 申込状況</button>
+        <button class="phase-tab-btn" data-phase="after">📝 イベント後分析</button>
+      </div>
+
+      <!-- BEFORE PHASE (dynamically rendered by renderEventPanel) -->
+      <div class="phase-panel" data-phase="before" style="display:block"></div>
+
+      <!-- AFTER PHASE (dynamically rendered by renderPostEventPanel) -->
+      <div class="phase-panel" data-phase="after" style="display:none"></div>
+
+    </section>
+
+  </main>
+
+  <!-- Phase 9-4: subtle admin link in footer -->
+  <footer class="dashboard-footer">
+    梅光学院中学校・高等学校 © 2026 ｜ オープンスクール申込管理ダッシュボード
+    <br><a href="teacher.html" class="footer-admin-link">管理者の方はこちら</a>
+  </footer>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- CDN Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<!-- App scripts (order matters - dependencies first) -->
+<script src="assets/js/config.js"></script>
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/csv-parser.js"></script>
+<script src="assets/js/data-processor.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/annotations.js"></script>
+<script src="assets/js/ui.js"></script>
+
+<script>
+// Student page: load published data.json first, then fall back to localStorage
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch('./data.json');
+    if (res.ok) {
+      const data = await res.json();
+      setPublishedCache(data);
+    }
+  } catch (_) {
+    // data.json not found — local dev or not yet published; localStorage fallback
+  }
+
+  renderProgressCards('student');
+  initEventTabs();
+
+  const hasAnyData = EVENTS.some(e => getEventRows(e.key).length > 0);
+  if (!hasAnyData) {
+    document.querySelectorAll('[id^="card-"]').forEach(card => {
+      const txt = card.querySelector('.progress-empty-text');
+      if (txt) txt.textContent = 'データ準備中です';
+    });
+  }
+});
+</script>
+</body>
+</html>

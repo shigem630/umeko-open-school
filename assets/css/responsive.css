@@ -1,0 +1,107 @@
+/* ===== TABLET (< 1024px) ===== */
+@media (max-width: 1024px) {
+  .progress-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chart-row-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== MOBILE (< 768px) ===== */
+@media (max-width: 768px) {
+  .dashboard-main {
+    padding: var(--space-4);
+  }
+
+  .header-subtitle { display: none; }
+
+  .header-inner { padding: 0 var(--space-4); }
+
+  .event-tab-section { padding: var(--space-4); }
+
+  .card { padding: var(--space-4); }
+
+  /* Event tabs → dropdown on mobile */
+  .event-tab-nav-desktop { display: none; }
+  .event-select-dropdown { display: block; }
+
+  .upload-files-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Phase 6-3: touch targets — minimum 36px on mobile */
+  .btn-sm {
+    min-height: 36px;
+    padding: var(--space-2) var(--space-3);
+  }
+}
+
+/* ===== SMALL MOBILE (< 480px) ===== */
+@media (max-width: 480px) {
+  .progress-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .progress-current { font-size: var(--text-3xl); }
+  .progress-goal { font-size: var(--text-xl); }
+
+  .section-title { font-size: var(--text-base); }
+
+  .tab-btn {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .chart-toolbar { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+
+  .annotation-form-row { flex-direction: column; }
+  .annotation-form-row .btn { width: 100%; }
+
+  .annotation-item { flex-wrap: wrap; }
+
+  /* Login overlay on very small screens */
+  .login-modal {
+    padding: var(--space-8) var(--space-6);
+  }
+}
+
+/* ===== PRINT (Phase 9-7: only hide chrome, not chart content) ===== */
+@media print {
+  /* Hide navigation and controls */
+  .dashboard-header,
+  .event-tab-nav-desktop,
+  .event-select-dropdown,
+  .phase-tab-nav,
+  .upload-panel,
+  .settings-panel,
+  .annotation-form,
+  .annotation-actions,
+  .chart-toolbar .btn,
+  .btn-ghost,
+  .btn-secondary,
+  .btn-danger,
+  .header-actions,
+  .dashboard-footer,
+  #toast-container {
+    display: none !important;
+  }
+
+  body { background: white; }
+
+  .dashboard-main { padding: 0; max-width: 100%; }
+  .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+  .progress-grid { grid-template-columns: repeat(4, 1fr); }
+  .chart-row-2col { grid-template-columns: 1fr 1fr; }
+  .school-tables-2col { grid-template-columns: 1fr 1fr; }
+
+  /* Make charts visible in print */
+  .phase-panel { display: block !important; }
+  canvas { max-width: 100%; }
+}
