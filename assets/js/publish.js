@@ -16,13 +16,18 @@ function saveGitHubConfig() {
   const saved = getGitHubConfig();
   const token = rawToken || saved.token;
 
+  // 必須項目チェック
+  if (!owner) { showToast('GitHubユーザー名を入力してください。（例: shigem630）', 'error'); return; }
+  if (!repo)  { showToast('リポジトリ名を入力してください。（例: umeko-open-school）', 'error'); return; }
+  if (!token) { showToast('Personal Access Tokenを入力してください。', 'error'); return; }
+
   localStorage.setItem(GH_CONFIG_KEY, JSON.stringify({ owner, repo, branch: 'main', token }));
 
   if (tokenEl) {
     tokenEl.value = '';
     tokenEl.placeholder = token ? '（設定済み — 変更する場合のみ入力）' : 'ghp_xxxxxxxxxxxx';
   }
-  showToast('GitHub設定を保存しました。', 'success');
+  showToast(`GitHub設定を保存しました（${owner}/${repo}）。`, 'success');
 }
 
 // ===== BUILD EXPORT DATA =====
@@ -85,11 +90,16 @@ async function publishToGitHub() {
   const token = tokenInput || saved.token; // トークン欄は非表示のため saved から補完
 
   if (!owner || !repo) {
-    showToast('GitHubユーザー名とリポジトリ名を入力してください。', 'error');
+    showToast('「⚡ GitHub 自動公開」の欄を開いて、ユーザー名・リポジトリ名を入力し「設定を保存」を押してください。', 'error');
+    // 設定欄を開いて強調
+    const details = document.querySelector('details');
+    if (details) { details.open = true; details.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     return;
   }
   if (!token) {
     showToast('Personal Access Tokenを入力して「設定を保存」を押してください。', 'error');
+    const details = document.querySelector('details');
+    if (details) { details.open = true; details.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     return;
   }
 
@@ -163,4 +173,14 @@ function initPublishUI() {
   if (tokenEl) tokenEl.placeholder = cfg.token
     ? '（設定済み — 変更する場合のみ入力）'
     : 'ghp_xxxxxxxxxxxx';
+
+  // 設定が不完全な場合は <details> を自動で開き、未入力欄を赤枠で示す
+  const configIncomplete = !cfg.owner || !cfg.repo || !cfg.token;
+  const details = document.querySelector('details');
+  if (configIncomplete && details) {
+    details.open = true;
+    if (ownerEl && !cfg.owner) ownerEl.style.outline = '2px solid #C00';
+    if (repoEl  && !cfg.repo)  repoEl.style.outline  = '2px solid #C00';
+    if (tokenEl && !cfg.token) tokenEl.style.outline  = '2px solid #C00';
+  }
 }
