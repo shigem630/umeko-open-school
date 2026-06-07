@@ -52,6 +52,20 @@ function getTopPrefectures(rows, n = 10) {
   return Object.entries(counts).slice(0, n).map(([name, count]) => ({ name, count }));
 }
 
+// Split '/' separated compound reason answers, count each part individually
+function countReasons(rows) {
+  const counts = {};
+  for (const row of rows) {
+    const val = row['reason'];
+    if (!val) continue;
+    const parts = val.split('/').map(s => s.trim()).filter(Boolean);
+    for (const part of parts) {
+      counts[part] = (counts[part] || 0) + 1;
+    }
+  }
+  return sortObjectByValue(counts);
+}
+
 // Returns satisfaction distribution for post-event analysis
 function getSatisfactionDist(rows) {
   return countByField(rows, 'satisfaction');
