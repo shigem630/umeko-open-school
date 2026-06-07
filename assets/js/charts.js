@@ -233,23 +233,42 @@ function buildChannelChart(canvasId, rows) {
   });
 }
 
+// 長いラベルを指定文字数で打ち切る（CJK文字は2幅として計算）
+function truncateLabel(text, maxVisual = 14) {
+  if (!text) return text;
+  let width = 0;
+  let result = '';
+  for (const ch of text) {
+    const code = ch.codePointAt(0);
+    const w = (code >= 0x1100 && code <= 0xFFE6) ? 2 : 1;
+    if (width + w > maxVisual) { result += '…'; break; }
+    result += ch;
+    width += w;
+  }
+  return result;
+}
+
 function buildReasonChart(canvasId, rows) {
-  const counts = countByField(rows, 'reason');
-  if (!Object.keys(counts).length) { destroyChart(canvasId); return null; }
+  // '/' で結合された複数回答を分割して集計
+  const rawCounts = countReasons(rows);
+  if (!Object.keys(rawCounts).length) { destroyChart(canvasId); return null; }
 
-  const labels = Object.keys(counts).map(l => wrapLabel(l, 16));
-  const data   = Object.values(counts);
+  // 上位10件のみ表示
+  const entries    = Object.entries(rawCounts).slice(0, 10);
+  const fullLabels = entries.map(([l]) => l);               // ツールチップ用（全文）
+  const shortLabels = fullLabels.map(l => truncateLabel(l, 13)); // 軸ラベル用（短縮）
+  const data        = entries.map(([, v]) => v);
 
-  // Dynamic height: ~60px per item (longer labels), minimum 200px
+  // 高さ: 1項目あたり 48px（1行ラベル想定）
   const canvas = document.getElementById(canvasId);
   if (canvas && canvas.parentElement) {
-    canvas.parentElement.style.height = Math.max(200, data.length * 60) + 'px';
+    canvas.parentElement.style.height = Math.max(200, data.length * 48) + 'px';
   }
 
   return renderChart(canvasId, {
     type: 'bar',
     data: {
-      labels,
+      labels: shortLabels,
       datasets: [{
         data,
         backgroundColor: CHART_COLORS[0],
@@ -262,7 +281,16 @@ function buildReasonChart(canvasId, rows) {
       responsive: true,
       maintainAspectRatio: false,
       layout: { padding: { left: 4 } },
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            // ツールチップには全文を表示
+            title: (ctx) => fullLabels[ctx[0].dataIndex] || ctx[0].label,
+            label: (ctx) => ` ${ctx.parsed.x}件`
+          }
+        }
+      },
       scales: {
         x: { beginAtZero: true, ticks: { stepSize: 1 } },
         y: { ticks: { autoSkip: false } }
