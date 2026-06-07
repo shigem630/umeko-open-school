@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-06-07T03:33:19.295Z",
+  "exportedAt": "2026-06-07T03:37:44.686Z",
   "slots": {
     "0725_jhs": {
-      "imported_at": "2026-06-06T14:58:14.216Z",
-      "count": 32,
+      "imported_at": "2026-06-07T03:37:32.422Z",
+      "count": 33,
       "rows": [
         {
           "blend_id": "371690",
@@ -741,11 +741,34 @@
           "free_comment": "",
           "applied_at": "2026-06-04",
           "prefecture": "山口県"
+        },
+        {
+          "blend_id": "382871",
+          "plusseed_id": "136375",
+          "app_no": "35",
+          "gender": "男性",
+          "school": "周南市立岐陽中学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "2年生",
+          "attendants": "1",
+          "wants_school_notice": "はい",
+          "wants_uniform": "はい",
+          "wants_consultation": "はい",
+          "channel": "梅光学院のホームページ",
+          "reason": "その他",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-06-07",
+          "prefecture": "山口県"
         }
       ]
     },
     "0725_elm": {
-      "imported_at": "2026-06-06T14:58:24.240Z",
+      "imported_at": "2026-06-07T03:37:37.180Z",
       "count": 21,
       "rows": [
         {
@@ -785,7 +808,7 @@
           "wants_uniform": "はい",
           "wants_consultation": "はい",
           "channel": "HP（ホームページ）",
-          "reason": "今の学校教育やルールに違和感があり、新しい環境をみたかった為/その他",
+          "reason": "今の学校教育やルールに違和感があり、新しい環境をみたかった為,その他",
           "satisfaction": "",
           "student_run_feedback": "",
           "impression_change": "",
@@ -831,7 +854,7 @@
           "wants_uniform": "はい",
           "wants_consultation": "はい",
           "channel": "Instagram（インスタグラム）",
-          "reason": "生徒だけで企画・運営していると知って面白そうだったから/その他",
+          "reason": "生徒だけで企画・運営していると知って面白そうだったから,その他",
           "satisfaction": "",
           "student_run_feedback": "",
           "impression_change": "",
@@ -877,7 +900,7 @@
           "wants_uniform": "はい",
           "wants_consultation": "はい",
           "channel": "その他",
-          "reason": "とりあえず県内の私立校を見ておきたかったから/その他",
+          "reason": "とりあえず県内の私立校を見ておきたかったから,その他",
           "satisfaction": "",
           "student_run_feedback": "",
           "impression_change": "",
@@ -1038,7 +1061,7 @@
           "wants_uniform": "はい",
           "wants_consultation": "いいえ",
           "channel": "知人・友人に聞いた",
-          "reason": "生徒だけで企画・運営していると知って面白そうだったから/制服を着てみたかったから/とりあえず県内の私立校を見ておきたかったから",
+          "reason": "生徒だけで企画・運営していると知って面白そうだったから,制服を着てみたかったから,とりあえず県内の私立校を見ておきたかったから",
           "satisfaction": "",
           "student_run_feedback": "",
           "impression_change": "",
@@ -1084,7 +1107,7 @@
           "wants_uniform": "いいえ",
           "wants_consultation": "いいえ",
           "channel": "学校で聞いた",
-          "reason": "チラシやポスターのメッセージ（ありのまま、など）に共感した為/とりあえず県内の私立校を見ておきたかったから",
+          "reason": "チラシやポスターのメッセージ（ありのまま、など）に共感した為,とりあえず県内の私立校を見ておきたかったから",
           "satisfaction": "",
           "student_run_feedback": "",
           "impression_change": "",
@@ -1199,7 +1222,7 @@
           "wants_uniform": "はい",
           "wants_consultation": "はい",
           "channel": "知人・友人に聞いた",
-          "reason": "生徒だけで企画・運営していると知って面白そうだったから/制服を着てみたかったから",
+          "reason": "生徒だけで企画・運営していると知って面白そうだったから,制服を着てみたかったから",
           "satisfaction": "",
           "student_run_feedback": "",
           "impression_change": "",
@@ -1222,7 +1245,7 @@
           "wants_uniform": "はい",
           "wants_consultation": "はい",
           "channel": "HP（ホームページ）",
-          "reason": "生徒だけで企画・運営していると知って面白そうだったから/制服を着てみたかったから",
+          "reason": "生徒だけで企画・運営していると知って面白そうだったから,制服を着てみたかったから",
           "satisfaction": "",
           "student_run_feedback": "",
           "impression_change": "",
