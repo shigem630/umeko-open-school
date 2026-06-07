@@ -74,10 +74,31 @@ function utf8ToBase64(str) {
 
 // ===== PUBLISH TO GITHUB =====
 async function publishToGitHub() {
-  const cfg = getGitHubConfig();
-  if (!cfg.owner || !cfg.repo || !cfg.token) {
-    showToast('GitHub設定（ユーザー名・リポジトリ名・トークン）を先に保存してください。', 'error');
+  // 入力欄の現在値を優先し、なければ保存済み設定を使う
+  const ownerInput = (document.getElementById('gh-owner')?.value || '').trim();
+  const repoInput  = (document.getElementById('gh-repo')?.value  || '').trim();
+  const tokenInput = (document.getElementById('gh-token')?.value || '').trim();
+  const saved      = getGitHubConfig();
+
+  const owner = ownerInput || saved.owner;
+  const repo  = repoInput  || saved.repo;
+  const token = tokenInput || saved.token; // トークン欄は非表示のため saved から補完
+
+  if (!owner || !repo) {
+    showToast('GitHubユーザー名とリポジトリ名を入力してください。', 'error');
     return;
+  }
+  if (!token) {
+    showToast('Personal Access Tokenを入力して「設定を保存」を押してください。', 'error');
+    return;
+  }
+
+  // 入力値を自動保存（次回から入力不要に）
+  localStorage.setItem(GH_CONFIG_KEY, JSON.stringify({ owner, repo, branch: 'main', token }));
+  const tokenEl = document.getElementById('gh-token');
+  if (tokenEl && tokenInput) {
+    tokenEl.value = '';
+    tokenEl.placeholder = '（設定済み — 変更する場合のみ入力）';
   }
 
   const payload = buildExportData();
@@ -91,11 +112,11 @@ async function publishToGitHub() {
 
   const json    = JSON.stringify(payload, null, 2);
   const content = utf8ToBase64(json);
-  const branch  = cfg.branch || 'main';
-  const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}`;
+  const branch  = 'main';
+  const apiBase = `https://api.github.com/repos/${owner}/${repo}`;
   const filePath = 'data.json';
   const headers = {
-    'Authorization': `Bearer ${cfg.token}`,
+    'Authorization': `Bearer ${token}`,
     'Accept': 'application/vnd.github+json',
     'Content-Type': 'application/json',
     'X-GitHub-Api-Version': '2022-11-28'
