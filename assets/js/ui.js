@@ -198,8 +198,17 @@ function renderEventPanel(eventKey) {
     afterPanel.innerHTML  = buildAfterPanelHTML(eventKey);
     const anns = getEventAnnotations(eventKey);
     buildTrendChart(`trend-${eventKey}`, rows, anns);
-    buildChannelChart(`channel-${eventKey}`, rows);
-    buildReasonChart(`reason-${eventKey}`, rows);
+    if (isCombined) {
+      const jhsRows = rows.filter(r => r._slot === 'jhs');
+      const elmRows = rows.filter(r => r._slot === 'elm');
+      buildChannelChart(`channel-${eventKey}-jhs`, jhsRows);
+      buildChannelChart(`channel-${eventKey}-elm`, elmRows);
+      buildReasonChart(`reason-${eventKey}-jhs`,  jhsRows);
+      buildReasonChart(`reason-${eventKey}-elm`,  elmRows);
+    } else {
+      buildChannelChart(`channel-${eventKey}`, rows);
+      buildReasonChart(`reason-${eventKey}`,   rows);
+    }
     buildGradeChart(`grade-${eventKey}`, rows, isCombined);
     if (isCombined) {
       renderSchoolTable(`school-tbody-${eventKey}-jhs`, rows.filter(r => r._slot === 'jhs'));
@@ -286,7 +295,50 @@ function buildBeforePanelHTML(key, rows = []) {
       <div id="anno-list-${key}" class="annotation-list"></div>
     </div>
 
-    <!-- Phase 8-7: channel chart is full-width -->
+    ${isCombined ? `
+    <div class="card">
+      <div class="chart-toolbar">
+        <div class="chart-title">📡 申込経路</div>
+      </div>
+      <div class="chart-row-2col" style="margin-bottom:0">
+        <div>
+          <div class="split-type-header jhs">
+            🎓 中学生（高校受験）
+            <button class="btn btn-ghost btn-sm split-dl-btn" onclick="downloadChartImage('channel-${key}-jhs','申込経路_中学生')">💾</button>
+          </div>
+          <div id="channel-${key}-jhs-wrap" style="position:relative;height:260px"><canvas id="channel-${key}-jhs"></canvas></div>
+        </div>
+        <div>
+          <div class="split-type-header elm">
+            📚 小学生（中学受験）
+            <button class="btn btn-ghost btn-sm split-dl-btn" onclick="downloadChartImage('channel-${key}-elm','申込経路_小学生')">💾</button>
+          </div>
+          <div id="channel-${key}-elm-wrap" style="position:relative;height:260px"><canvas id="channel-${key}-elm"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chart-toolbar">
+        <div class="chart-title">💬 申込理由</div>
+      </div>
+      <div class="chart-row-2col" style="margin-bottom:0">
+        <div>
+          <div class="split-type-header jhs">
+            🎓 中学生（高校受験）
+            <button class="btn btn-ghost btn-sm split-dl-btn" onclick="downloadChartImage('reason-${key}-jhs','申込理由_中学生')">💾</button>
+          </div>
+          <div id="reason-${key}-jhs-wrap" style="position:relative;height:260px"><canvas id="reason-${key}-jhs"></canvas></div>
+        </div>
+        <div>
+          <div class="split-type-header elm">
+            📚 小学生（中学受験）
+            <button class="btn btn-ghost btn-sm split-dl-btn" onclick="downloadChartImage('reason-${key}-elm','申込理由_小学生')">💾</button>
+          </div>
+          <div id="reason-${key}-elm-wrap" style="position:relative;height:260px"><canvas id="reason-${key}-elm"></canvas></div>
+        </div>
+      </div>
+    </div>
+    ` : `
     <div class="card">
       <div class="chart-toolbar">
         <div class="chart-title">📡 申込経路</div>
@@ -294,7 +346,6 @@ function buildBeforePanelHTML(key, rows = []) {
       </div>
       <div id="channel-${key}-wrap" style="position:relative;height:260px"><canvas id="channel-${key}"></canvas></div>
     </div>
-
     <div class="card">
       <div class="chart-toolbar">
         <div class="chart-title">💬 申込理由</div>
@@ -302,6 +353,7 @@ function buildBeforePanelHTML(key, rows = []) {
       </div>
       <div id="reason-${key}-wrap" style="position:relative;height:260px"><canvas id="reason-${key}"></canvas></div>
     </div>
+    `}
 
     <div class="card">
       <div class="card-title">🎓 学年別申込数</div>

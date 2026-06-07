@@ -41,6 +41,32 @@
   margin-bottom: var(--space-6);
 }
 
+/* ===== 小学生/中学生 分割チャート ===== */
+.split-type-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+.split-type-header.jhs {
+  background: rgba(123, 21, 53, 0.08);
+  color: var(--color-primary);
+  border-left: 3px solid var(--color-primary);
+}
+.split-type-header.elm {
+  background: rgba(21, 101, 192, 0.08);
+  color: #1565C0;
+  border-left: 3px solid #1565C0;
+}
+.split-dl-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .chart-card {
   position: relative;
 }

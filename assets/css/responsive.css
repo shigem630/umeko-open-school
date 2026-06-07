@@ -11,6 +11,11 @@
   .settings-grid {
     grid-template-columns: 1fr;
   }
+
+  /* 分割チャートのヘッダー: タブレットでは縦積みなので上マージン追加 */
+  .split-type-header + .split-type-header {
+    margin-top: var(--space-4);
+  }
 }
 
 /* ===== MOBILE (< 768px) ===== */
