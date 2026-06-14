@@ -69,6 +69,7 @@
         <h2 class="section-title">申込状況サマリー</h2>
         <button class="btn btn-ghost btn-sm" onclick="renderProgressCards()">🔄 更新</button>
       </div>
+      <div id="new-visitor-summary"></div>
       <div class="progress-grid">
         <!-- Phase 6-4: empty cards scroll to upload panel -->
         <div id="card-0725" class="progress-card" onclick="handleCardClick('0725')">
@@ -237,7 +238,14 @@
           <input type="number" id="goal-1128" class="form-input" min="1" max="999" style="width:120px;text-align:center;font-weight:700;color:var(--color-primary)">
         </div>
       </div>
-      <button class="btn btn-primary" onclick="saveGoals()" style="margin-bottom:var(--space-8)">目標人数を保存</button>
+      <div class="goal-input-group" style="margin-top:var(--space-4)">
+        <label>🎯 新規来校者 全体目標</label>
+        <div style="display:flex;align-items:center;gap:var(--space-2)">
+          <input type="number" id="goal-new-visitor" class="form-input" min="1" max="9999" style="width:120px;text-align:center;font-weight:700;color:var(--color-primary)">
+          <span style="font-size:var(--text-sm);color:var(--color-gray-500)">人（複数回通算・重複なし）</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveGoals()" style="margin-top:var(--space-4);margin-bottom:var(--space-8)">目標人数を保存</button>
 
       <h3 style="font-size:var(--text-base);font-weight:700;margin-bottom:var(--space-3);color:var(--color-gray-700)">パスワード変更</h3>
       <div style="display:flex;gap:var(--space-3);align-items:flex-end;flex-wrap:wrap;margin-bottom:var(--space-8)">

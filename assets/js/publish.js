@@ -45,7 +45,8 @@ function buildExportData() {
     exportedAt: new Date().toISOString(),
     slots,
     annotations: getAnnotations(),
-    goals: config.goals
+    goals: config.goals,
+    newVisitorGoal: config.newVisitorGoal || 320
   };
 }
 

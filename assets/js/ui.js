@@ -84,6 +84,10 @@ function renderProgressCards(role) {
       return;
     }
 
+    // 新規/繰り返し・来場見込み
+    const vs = getVisitorStats(event.key);
+    const hc = getHeadcount(rows);
+
     card.innerHTML = `
       <div class="progress-card-header">
         <div>
@@ -106,6 +110,13 @@ function renderProgressCards(role) {
           <span class="breakdown-elm">小学生 ${elmCount}人</span>
         </div>
       ` : ''}
+      ${vs.available ? `
+        <div class="progress-visitor-row">
+          <span class="visitor-new-badge">🆕 新規 ${vs.newCount}人</span>
+          <span class="visitor-sep">・</span>
+          <span class="visitor-return-badge">🔁 再訪 ${vs.returningCount}人</span>
+        </div>
+      ` : ''}
       <div class="progress-bar-track">
         <div class="progress-bar-fill" style="width:${pct}%"></div>
       </div>
@@ -115,9 +126,52 @@ function renderProgressCards(role) {
       ` : achieved ? `
         <div class="progress-pace" style="background:var(--color-gold-soft);color:var(--color-gold)">🎉 目標達成！</div>
       ` : ''}
+      <div class="progress-headcount">
+        来場見込み <strong>${hc.total}人</strong>
+        <span class="headcount-sub">（申込${hc.students}＋保護者等${hc.guardians}）</span>
+      </div>
       <div class="progress-updated">${updatedStr ? `最終更新: ${updatedStr}` : ''}</div>
     `;
   });
+  renderNewVisitorSummary();
+}
+
+// ===== 新規来校者累計カード =====
+function renderNewVisitorSummary() {
+  const el = document.getElementById('new-visitor-summary');
+  if (!el) return;
+
+  const config = getConfig();
+  const goal = config.newVisitorGoal || 320;
+  const { count, available } = getCumulativeNewVisitors();
+
+  const hasAnyData = EVENTS.some(e => getEventRows(e.key).length > 0);
+  if (!hasAnyData) { el.innerHTML = ''; return; }
+
+  const pct = goal > 0 ? Math.min(100, Math.round(count * 100 / goal)) : 0;
+  const achieved = count >= goal;
+
+  el.innerHTML = `
+    <div class="new-visitor-summary-card card">
+      <div class="nv-summary-inner">
+        <div class="nv-summary-label">🎯 新規来校者 累計目標</div>
+        ${available ? `
+          <div class="nv-summary-numbers">
+            <span class="nv-current">${count}</span>
+            <span class="nv-sep"> / </span>
+            <span class="nv-goal">${goal}</span>
+            <span class="nv-unit">人</span>
+          </div>
+          <div class="progress-bar-track nv-bar">
+            <div class="progress-bar-fill" style="width:${pct}%"></div>
+          </div>
+          <div class="nv-rate">${achieved ? '🎉 目標達成！' : `達成率 <strong>${pct}%</strong> ／ あと <strong>${goal - count}人</strong>`}</div>
+        ` : `
+          <div class="nv-unavailable">プラスシードIDのデータがある場合に自動集計されます</div>
+        `}
+      </div>
+    </div>
+  `;
 }
 
 // ===== EVENT TABS =====
@@ -230,6 +284,25 @@ function buildBeforePanelHTML(key, rows = []) {
   const jhsCount = isCombined ? rows.filter(r => r._slot === 'jhs').length : 0;
   const elmCount = isCombined ? rows.filter(r => r._slot === 'elm').length : 0;
 
+  // 来場見込み・新規/繰り返し
+  const hc = getHeadcount(rows);
+  const vs = getVisitorStats(key);
+
+  const visitorRow = vs.available ? `
+    <div class="breakdown-visitor-row">
+      <span class="breakdown-visitor-new">🆕 新規 ${vs.newCount}人</span>
+      <span class="breakdown-visitor-return">🔁 再訪 ${vs.returningCount}人</span>
+    </div>
+  ` : '';
+
+  const headcountRow = rows.length > 0 ? `
+    <div class="breakdown-headcount-row">
+      <span class="breakdown-headcount-label">来場見込み</span>
+      <span class="breakdown-headcount-value">${hc.total}人</span>
+      <span class="breakdown-headcount-sub">（申込${hc.students}＋保護者等${hc.guardians}）</span>
+    </div>
+  ` : '';
+
   const breakdownCard = isCombined ? `
     <div class="card breakdown-card">
       <div class="breakdown-stat-row">
@@ -248,6 +321,13 @@ function buildBeforePanelHTML(key, rows = []) {
           <div class="breakdown-stat-count">${rows.length}<span class="breakdown-unit">人</span></div>
         </div>
       </div>
+      ${visitorRow}
+      ${headcountRow}
+    </div>
+  ` : rows.length > 0 ? `
+    <div class="card breakdown-card single-event-breakdown">
+      ${visitorRow}
+      ${headcountRow}
     </div>
   ` : '';
 
@@ -582,6 +662,8 @@ function renderSettingsPanel() {
     const input = document.getElementById(`goal-${event.key}`);
     if (input) input.value = config.goals[event.key] || event.defaultGoal;
   });
+  const nvInput = document.getElementById('goal-new-visitor');
+  if (nvInput) nvInput.value = config.newVisitorGoal || 320;
 }
 
 function saveGoals() {
@@ -593,6 +675,11 @@ function saveGoals() {
       if (val > 0) config.goals[event.key] = val;
     }
   });
+  const nvInput = document.getElementById('goal-new-visitor');
+  if (nvInput) {
+    const val = parseInt(nvInput.value, 10);
+    if (val > 0) config.newVisitorGoal = val;
+  }
   saveConfig(config);
   showToast('目標人数を保存しました。', 'success');
   renderProgressCards();

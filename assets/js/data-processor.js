@@ -109,6 +109,55 @@ function calcPace(current, goal, eventDateStr) {
 
 // Phase 7-2: getDeltaFromYesterday removed (was dead code — ui.js computes delta inline)
 
+// ===== 新規/繰り返し来校者分析 =====
+
+// plusseed_id を使って新規/繰り返しを判定
+function getVisitorStats(eventKey) {
+  const eventIdx = EVENTS.findIndex(e => e.key === eventKey);
+  const currentRows = getEventRows(eventKey);
+  const previousIds = new Set();
+  for (let i = 0; i < eventIdx; i++) {
+    getEventRows(EVENTS[i].key).forEach(r => {
+      if (r.plusseed_id) previousIds.add(r.plusseed_id);
+    });
+  }
+  let newCount = 0, returningCount = 0, noIdCount = 0;
+  const seen = new Set();
+  for (const r of currentRows) {
+    if (!r.plusseed_id) { noIdCount++; continue; }
+    if (seen.has(r.plusseed_id)) continue;
+    seen.add(r.plusseed_id);
+    previousIds.has(r.plusseed_id) ? returningCount++ : newCount++;
+  }
+  const available = currentRows.length > 0 && noIdCount < currentRows.length;
+  return { newCount, returningCount, noIdCount, available };
+}
+
+// 全イベントの累計新規来校者数（重複除去）
+function getCumulativeNewVisitors() {
+  const allIds = new Set();
+  let count = 0;
+  for (const event of EVENTS) {
+    const eventIds = new Set();
+    getEventRows(event.key).forEach(r => {
+      if (!r.plusseed_id || eventIds.has(r.plusseed_id)) return;
+      eventIds.add(r.plusseed_id);
+      if (!allIds.has(r.plusseed_id)) { allIds.add(r.plusseed_id); count++; }
+    });
+  }
+  return { count, available: allIds.size > 0 };
+}
+
+// 来場見込み人数（申込者＋保護者等）
+function getHeadcount(rows) {
+  const students = rows.length;
+  const guardians = rows.reduce((s, r) => {
+    const n = parseInt(r.attendants, 10);
+    return s + (isNaN(n) ? 0 : n);
+  }, 0);
+  return { students, guardians, total: students + guardians };
+}
+
 // Canonical formatDate — shared across all JS files (Phase 7-3: duplicate removed from ui.js)
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

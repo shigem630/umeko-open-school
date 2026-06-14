@@ -44,16 +44,21 @@ function getConfig() {
   const stored = safeGet('config');
   const base = stored || {
     goals: Object.fromEntries(EVENTS.map(e => [e.key, e.defaultGoal])),
+    newVisitorGoal: 320,
     password_hash: DEFAULT_PASSWORD_HASH,
     version: APP_VERSION
   };
+  if (base.newVisitorGoal === undefined) base.newVisitorGoal = 320; // 既存データのマイグレーション
   if (!stored) safeSet('config', base);
   if (stored && stored.version && stored.version !== APP_VERSION) {
     console.warn(`[umeko] config version mismatch: stored=${stored.version}, current=${APP_VERSION}.`);
   }
   // Overlay goals from published data.json (student page only; null on teacher page)
-  if (_publishedCache && _publishedCache.goals) {
-    return { ...base, goals: { ...base.goals, ..._publishedCache.goals } };
+  if (_publishedCache) {
+    const overlay = {};
+    if (_publishedCache.goals) overlay.goals = { ...base.goals, ..._publishedCache.goals };
+    if (_publishedCache.newVisitorGoal) overlay.newVisitorGoal = _publishedCache.newVisitorGoal;
+    return { ...base, ...overlay };
   }
   return base;
 }
