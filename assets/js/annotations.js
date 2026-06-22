@@ -56,9 +56,9 @@ function renderAnnotationList(eventKey, containerId) {
         <span class="annotation-date">${formatAnnotationDate(a.date)}</span>
         <span class="annotation-badge type--${a.type}">${typeLabel}</span>
         <span class="annotation-text">${escapeHtml(a.text)}</span>
-        <div class="annotation-actions">
+        ${window.IS_TEACHER ? `<div class="annotation-actions">
           <button class="btn btn-ghost btn-sm btn-icon anno-delete-btn" title="削除" data-ann-id="${a.id}">✕</button>
-        </div>
+        </div>` : ''}
       </div>
     `;
   }).join('');

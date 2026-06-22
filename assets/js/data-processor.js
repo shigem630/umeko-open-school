@@ -161,15 +161,15 @@ function getHeadcount(rows) {
 
 // 1つの希望フィールド値を解釈
 // 戻り値: 'want'=申込/希望 / 'waitlist'=次回希望(定員超過) / 'declined'=不要 / null=未回答
-// isConsultation=true のとき、値"2"は「申込できなかった（定員超過・次回希望）」扱い
-function _parseWants(val, isConsultation) {
+// 数値"2"は旧・新どちらのCSVでも「不要/申し込まない」扱い
+// テキスト「また別の機会に…」のみ次回希望としてカウント
+function _parseWants(val) {
   if (val === null || val === undefined || val === '') return null;
   const v = String(val).trim();
   if (!v) return null;
   if (v === '1' || v === 'はい' || v.startsWith('はい')) return 'want';
   if (v.includes('別の機会') || v.includes('また申し込')) return 'waitlist';
-  if (v === '2') return isConsultation ? 'waitlist' : 'declined';
-  if (v === 'いいえ' || v.startsWith('いいえ') || v.includes('了承') || v.includes('分かりました')) return 'declined';
+  if (v === '2' || v === 'いいえ' || v.startsWith('いいえ') || v.includes('了承') || v.includes('分かりました')) return 'declined';
   return null;
 }
 
@@ -179,9 +179,9 @@ function getOptionCounts(rows) {
   let uWant = 0, uWaitlist = 0, uTotal = 0;
   let cWant = 0, cWaitlist = 0, cTotal = 0;
   for (const r of rows) {
-    const u = _parseWants(r.wants_uniform, false);
+    const u = _parseWants(r.wants_uniform);
     if (u !== null) { uTotal++; if (u === 'want') uWant++; else if (u === 'waitlist') uWaitlist++; }
-    const c = _parseWants(r.wants_consultation, true);
+    const c = _parseWants(r.wants_consultation);
     if (c !== null) { cTotal++; if (c === 'want') cWant++; else if (c === 'waitlist') cWaitlist++; }
   }
   return {
