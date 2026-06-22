@@ -53,13 +53,23 @@ function getTopPrefectures(rows, n = 10) {
   return Object.entries(counts).slice(0, n).map(([name, count]) => ({ name, count }));
 }
 
+// 申込理由文字列の正規化（不可視文字・特殊スペースを除去してから比較）
+function _normalizeReason(s) {
+  return s
+    .replace(/[​‌‍﻿­]/g, '') // ゼロ幅文字・ソフトハイフン
+    .replace(/[ 　 -   ]/g, ' ') // 全角スペース等 → 半角スペース
+    .replace(/\s+/g, ' ')
+    .trim()
+    .normalize('NFC');
+}
+
 // Split '/' separated compound reason answers, count each part individually
 function countReasons(rows) {
   const counts = {};
   for (const row of rows) {
     const val = row['reason'];
     if (!val) continue;
-    const parts = val.split('/').map(s => s.trim().normalize('NFC')).filter(Boolean);
+    const parts = val.split('/').map(s => _normalizeReason(s)).filter(Boolean);
     for (const part of parts) {
       const canonical = REASON_ALIASES[part] || part;
       counts[canonical] = (counts[canonical] || 0) + 1;
