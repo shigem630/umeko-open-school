@@ -59,9 +59,10 @@ function countReasons(rows) {
   for (const row of rows) {
     const val = row['reason'];
     if (!val) continue;
-    const parts = val.split('/').map(s => s.trim()).filter(Boolean);
+    const parts = val.split('/').map(s => s.trim().normalize('NFC')).filter(Boolean);
     for (const part of parts) {
-      counts[part] = (counts[part] || 0) + 1;
+      const canonical = REASON_ALIASES[part] || part;
+      counts[canonical] = (counts[canonical] || 0) + 1;
     }
   }
   return sortObjectByValue(counts);
