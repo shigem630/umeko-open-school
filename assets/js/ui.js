@@ -281,11 +281,15 @@ function renderEventPanel(eventKey) {
 function buildBeforePanelHTML(key, rows = []) {
   const event = EVENTS.find(e => e.key === key);
   const isCombined = event && event.combined;
-  const jhsCount = isCombined ? rows.filter(r => r._slot === 'jhs').length : 0;
-  const elmCount = isCombined ? rows.filter(r => r._slot === 'elm').length : 0;
+  const jhsRows = isCombined ? rows.filter(r => r._slot === 'jhs') : [];
+  const elmRows = isCombined ? rows.filter(r => r._slot === 'elm') : [];
+  const jhsCount = jhsRows.length;
+  const elmCount = elmRows.length;
 
   // 来場見込み・新規/繰り返し
-  const hc = getHeadcount(rows);
+  const hc    = getHeadcount(rows);
+  const jhsHc = isCombined ? getHeadcount(jhsRows) : null;
+  const elmHc = isCombined ? getHeadcount(elmRows) : null;
   const vs = getVisitorStats(key);
 
   const visitorRow = vs.available ? `
@@ -295,13 +299,32 @@ function buildBeforePanelHTML(key, rows = []) {
     </div>
   ` : '';
 
-  const headcountRow = rows.length > 0 ? `
+  // 来場見込み: combined は中学生/小学生を分けて表示
+  const headcountRow = rows.length > 0 ? (isCombined ? `
+    <div class="breakdown-headcount-split">
+      <div class="breakdown-hc-row jhs">
+        <span class="breakdown-hc-type">中学生</span>
+        <span class="breakdown-hc-detail">申込${jhsHc.students}＋保護者等${jhsHc.guardians}</span>
+        <span class="breakdown-hc-value">${jhsHc.total}人</span>
+      </div>
+      <div class="breakdown-hc-row elm">
+        <span class="breakdown-hc-type">小学生</span>
+        <span class="breakdown-hc-detail">申込${elmHc.students}＋保護者等${elmHc.guardians}</span>
+        <span class="breakdown-hc-value">${elmHc.total}人</span>
+      </div>
+      <div class="breakdown-hc-row total">
+        <span class="breakdown-hc-type">合計 来場見込み</span>
+        <span class="breakdown-hc-detail"></span>
+        <span class="breakdown-hc-value total">${hc.total}人</span>
+      </div>
+    </div>
+  ` : `
     <div class="breakdown-headcount-row">
       <span class="breakdown-headcount-label">来場見込み</span>
       <span class="breakdown-headcount-value">${hc.total}人</span>
       <span class="breakdown-headcount-sub">（申込${hc.students}＋保護者等${hc.guardians}）</span>
     </div>
-  ` : '';
+  `) : '';
 
   const breakdownCard = isCombined ? `
     <div class="card breakdown-card">

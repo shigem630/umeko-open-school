@@ -116,6 +116,16 @@ const PERSONAL_INFO_FIELDS = [
   'guardian_name', 'email', 'consultation_detail'
 ];
 
+// 申込経路の表記ゆれ統一マップ（旧表記 → 新表記）
+const CHANNEL_ALIASES = {
+  '梅光学院のホームページ':              '梅光学院の公式ホームページ',
+  'HP（ホームページ）':                  '梅光学院の公式ホームページ',
+  'Instagram（インスタグラム）':          '梅光学院の公式Instagram',
+  '知人・友人に聞いた':                  '知人・友人・家族から聞いた',
+  'その他のSNS（TikTok、Facebook、Xなど）': 'その他のSNS（YouTube、TikTok、Xなど）',
+  '新しいポスター（青色のデザインのもの）':   '新しいポスター・チラシ（青空のデザインのもの）',
+};
+
 // Default password (SHA-256 of "baiko2026") - can be changed in settings
 const DEFAULT_PASSWORD_HASH = '0d93c139337b3c8c7ea3c3166896afd4f78ed6637edc68d450378f4bcf2ffc87';
 

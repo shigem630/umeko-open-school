@@ -337,6 +337,39 @@
   margin-left: var(--space-1);
 }
 
+/* ===== 来場見込み 中学生/小学生分割表示 ===== */
+.breakdown-headcount-split {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.breakdown-hc-row {
+  display: grid;
+  grid-template-columns: 8em 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.breakdown-hc-row.jhs { background: rgba(123,21,53,0.05); }
+.breakdown-hc-row.elm { background: rgba(21,101,192,0.05); }
+.breakdown-hc-row.total {
+  background: var(--color-gray-100);
+  margin-top: var(--space-1);
+  font-weight: 700;
+}
+
+.breakdown-hc-type { font-weight: 600; color: var(--color-gray-700); }
+.breakdown-hc-detail { color: var(--color-gray-400); font-size: var(--text-xs); }
+.breakdown-hc-value { font-weight: 700; color: var(--color-primary); white-space: nowrap; }
+.breakdown-hc-value.total { font-size: var(--text-base); }
+
 /* ===== breakdown カード内 新規/来場見込み ===== */
 .breakdown-visitor-row {
   display: flex;

@@ -24,8 +24,9 @@ function getCumulativeCounts(rows) {
 function countByField(rows, field) {
   const counts = {};
   for (const row of rows) {
-    const val = row[field];
-    if (!val) continue;
+    const raw = row[field];
+    if (!raw) continue;
+    const val = field === 'channel' ? (CHANNEL_ALIASES[raw] || raw) : raw;
     counts[val] = (counts[val] || 0) + 1;
   }
   return sortObjectByValue(counts);
