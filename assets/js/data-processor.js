@@ -53,14 +53,26 @@ function getTopPrefectures(rows, n = 10) {
   return Object.entries(counts).slice(0, n).map(([name, count]) => ({ name, count }));
 }
 
-// 申込理由文字列の正規化（不可視文字・特殊スペースを除去してから比較）
-function _normalizeReason(s) {
-  return s
-    .replace(/[​‌‍﻿­]/g, '') // ゼロ幅文字・ソフトハイフン
-    .replace(/[ 　 -   ]/g, ' ') // 全角スペース等 → 半角スペース
+// 申込理由の前方一致マップ（先頭が一致すれば統一形に正規化）
+const _REASON_PREFIX_MAP = [
+  ['とりあえず県内',          'とりあえず県内の私立校を見ておきたかったから'],
+  ['今の学校教育',            '今の学校教育やルールに違和感があり、新しい環境をみたかった為'],
+  ['自律学習（単元テスト等）',  '自律学習（単元テスト等）に興味があったから'],
+  ['生徒だけで企画・運営',     '生徒だけで企画・運営していると知って面白そうだったから'],
+  ['チラシやポスター',         'チラシやポスターのメッセージ（ありのまま、など）に共感した'],
+];
+
+function _canonicalReason(raw) {
+  const s = raw
+    .replace(/[\u200B\u200C\u200D\uFEFF\u00AD]/g, '')
+    .replace(/[\u00A0\u3000]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .normalize('NFC');
+  for (const [prefix, canonical] of _REASON_PREFIX_MAP) {
+    if (s.startsWith(prefix)) return canonical;
+  }
+  return (typeof REASON_ALIASES !== 'undefined' && REASON_ALIASES[s]) || s;
 }
 
 // Split '/' separated compound reason answers, count each part individually
@@ -69,10 +81,9 @@ function countReasons(rows) {
   for (const row of rows) {
     const val = row['reason'];
     if (!val) continue;
-    const parts = val.split('/').map(s => _normalizeReason(s)).filter(Boolean);
+    const parts = val.split('/').map(s => _canonicalReason(s)).filter(Boolean);
     for (const part of parts) {
-      const canonical = REASON_ALIASES[part] || part;
-      counts[canonical] = (counts[canonical] || 0) + 1;
+      counts[part] = (counts[part] || 0) + 1;
     }
   }
   return sortObjectByValue(counts);
