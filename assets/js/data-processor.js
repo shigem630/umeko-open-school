@@ -159,6 +159,37 @@ function getHeadcount(rows) {
   return { students, guardians, total: students + guardians };
 }
 
+// 1つの希望フィールド値を解釈
+// 戻り値: 'want'=申込/希望 / 'waitlist'=次回希望(定員超過) / 'declined'=不要 / null=未回答
+// isConsultation=true のとき、値"2"は「申込できなかった（定員超過・次回希望）」扱い
+function _parseWants(val, isConsultation) {
+  if (val === null || val === undefined || val === '') return null;
+  const v = String(val).trim();
+  if (!v) return null;
+  if (v === '1' || v === 'はい' || v.startsWith('はい')) return 'want';
+  if (v.includes('別の機会') || v.includes('また申し込')) return 'waitlist';
+  if (v === '2') return isConsultation ? 'waitlist' : 'declined';
+  if (v === 'いいえ' || v.startsWith('いいえ') || v.includes('了承') || v.includes('分かりました')) return 'declined';
+  return null;
+}
+
+// 制服試着・個別相談の希望者数を集計
+// available=false の場合はその回のCSVに質問がなかった（表示しない）
+function getOptionCounts(rows) {
+  let uWant = 0, uWaitlist = 0, uTotal = 0;
+  let cWant = 0, cWaitlist = 0, cTotal = 0;
+  for (const r of rows) {
+    const u = _parseWants(r.wants_uniform, false);
+    if (u !== null) { uTotal++; if (u === 'want') uWant++; else if (u === 'waitlist') uWaitlist++; }
+    const c = _parseWants(r.wants_consultation, true);
+    if (c !== null) { cTotal++; if (c === 'want') cWant++; else if (c === 'waitlist') cWaitlist++; }
+  }
+  return {
+    uniform: { want: uWant, waitlist: uWaitlist, total: uTotal, available: uTotal > 0 },
+    consult: { want: cWant, waitlist: cWaitlist, total: cTotal, available: cTotal > 0 },
+  };
+}
+
 // Canonical formatDate — shared across all JS files (Phase 7-3: duplicate removed from ui.js)
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

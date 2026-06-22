@@ -423,6 +423,56 @@
   color: var(--color-gray-400);
 }
 
+/* ===== 制服試着・個別相談 希望者行 ===== */
+.breakdown-option-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  padding: var(--space-1) 0;
+  flex-wrap: wrap;
+}
+
+.breakdown-option-label {
+  font-weight: 600;
+  color: var(--color-gray-700);
+  min-width: 9em;
+}
+
+.breakdown-option-jhs {
+  background: rgba(123,21,53,0.08);
+  color: var(--color-primary);
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.breakdown-option-sub {
+  font-weight: 400;
+  color: var(--color-gray-500);
+  font-size: var(--text-xs);
+}
+
+.waitlist-row {
+  margin-top: -2px;
+  opacity: 0.85;
+}
+
+.breakdown-option-jhs.faded,
+.breakdown-option-elm.faded {
+  opacity: 0.75;
+}
+
+.breakdown-option-elm {
+  background: rgba(21,101,192,0.08);
+  color: #1565C0;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-3);
+  font-size: var(--text-xs);
+}
+
 /* 単独イベント用 breakdown カード */
 .single-event-breakdown {
   padding: var(--space-4) var(--space-5);

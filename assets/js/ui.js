@@ -299,6 +299,32 @@ function buildBeforePanelHTML(key, rows = []) {
     </div>
   ` : '';
 
+  // 制服試着・個別相談 希望者数（中学生/小学生それぞれ）
+  const jhsOpt = isCombined ? getOptionCounts(jhsRows) : getOptionCounts(rows);
+  const elmOpt = isCombined ? getOptionCounts(elmRows) : null;
+
+  function optionRow(label, waitlistLabel, jhs, elm) {
+    const jhsAvail = jhs.available;
+    const elmAvail = elm && elm.available;
+    if (!jhsAvail && !elmAvail) return '';
+    const wantRow = `
+      <div class="breakdown-option-row">
+        <span class="breakdown-option-label">${label}</span>
+        ${jhsAvail ? `<span class="breakdown-option-jhs">中学生 ${jhs.want}人</span>` : ''}
+        ${elmAvail ? `<span class="breakdown-option-elm">小学生 ${elm.want}人</span>` : ''}
+      </div>`;
+    const hasWaitlist = (jhsAvail && jhs.waitlist > 0) || (elmAvail && elm.waitlist > 0);
+    const waitRow = hasWaitlist ? `
+      <div class="breakdown-option-row waitlist-row">
+        <span class="breakdown-option-label breakdown-option-sub">└ ${waitlistLabel}</span>
+        ${jhsAvail && jhs.waitlist > 0 ? `<span class="breakdown-option-jhs faded">中学生 ${jhs.waitlist}人</span>` : ''}
+        ${elmAvail && elm.waitlist > 0 ? `<span class="breakdown-option-elm faded">小学生 ${elm.waitlist}人</span>` : ''}
+      </div>` : '';
+    return wantRow + waitRow;
+  }
+  const uniformRow = optionRow('👔 制服試着申込', '次回試着希望', jhsOpt.uniform, elmOpt ? elmOpt.uniform : null);
+  const consultRow = optionRow('💬 個別相談申込', '定員超過・次回希望', jhsOpt.consult, elmOpt ? elmOpt.consult : null);
+
   // 来場見込み: combined は中学生/小学生を分けて表示
   const headcountRow = rows.length > 0 ? (isCombined ? `
     <div class="breakdown-headcount-split">
@@ -346,11 +372,13 @@ function buildBeforePanelHTML(key, rows = []) {
       </div>
       ${visitorRow}
       ${headcountRow}
+      ${uniformRow}${consultRow}
     </div>
   ` : rows.length > 0 ? `
     <div class="card breakdown-card single-event-breakdown">
       ${visitorRow}
       ${headcountRow}
+      ${uniformRow}${consultRow}
     </div>
   ` : '';
 
