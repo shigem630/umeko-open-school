@@ -1,9 +1,9 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-06-28T01:12:46.735Z",
+  "exportedAt": "2026-06-28T12:48:56.752Z",
   "slots": {
     "0725_jhs": {
-      "imported_at": "2026-06-28T01:12:25.424Z",
+      "imported_at": "2026-06-28T12:48:39.649Z",
       "count": 82,
       "rows": [
         {
@@ -1895,7 +1895,7 @@
       ]
     },
     "0725_elm": {
-      "imported_at": "2026-06-28T01:12:22.756Z",
+      "imported_at": "2026-06-28T12:48:36.921Z",
       "count": 47,
       "rows": [
         {
@@ -2982,8 +2982,8 @@
       ]
     },
     "0829_jhs": {
-      "imported_at": "2026-06-28T01:12:33.756Z",
-      "count": 25,
+      "imported_at": "2026-06-28T12:48:45.187Z",
+      "count": 29,
       "rows": [
         {
           "blend_id": "386687",
@@ -3559,11 +3559,103 @@
           "free_comment": "",
           "applied_at": "2026-06-28",
           "prefecture": "山口県"
+        },
+        {
+          "blend_id": "419145",
+          "plusseed_id": "447637",
+          "app_no": "26",
+          "gender": "女性",
+          "school": "下関市立川中中学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "3年生",
+          "attendants": "1",
+          "wants_school_notice": "いいえ",
+          "wants_uniform": "",
+          "wants_consultation": "",
+          "channel": "新しいポスター・チラシ（青空のデザインのもの）",
+          "reason": "とりあえず県内の私立校を見ておきたかったから",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-06-28",
+          "prefecture": "山口県"
+        },
+        {
+          "blend_id": "419261",
+          "plusseed_id": "447739",
+          "app_no": "27",
+          "gender": "女性",
+          "school": "下関市立長府中学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "2年生",
+          "attendants": "",
+          "wants_school_notice": "いいえ",
+          "wants_uniform": "",
+          "wants_consultation": "",
+          "channel": "知人・友人・家族から聞いた",
+          "reason": "その他",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-06-28",
+          "prefecture": "山口県"
+        },
+        {
+          "blend_id": "419289",
+          "plusseed_id": "447196",
+          "app_no": "28",
+          "gender": "女性",
+          "school": "下関市立長府中学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "2年生",
+          "attendants": "1",
+          "wants_school_notice": "いいえ",
+          "wants_uniform": "",
+          "wants_consultation": "",
+          "channel": "学校案内パンフレット",
+          "reason": "チラシやポスターのメッセージ（ありのまま、など）に共感した為",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-06-28",
+          "prefecture": "山口県"
+        },
+        {
+          "blend_id": "420610",
+          "plusseed_id": "421765",
+          "app_no": "29",
+          "gender": "女性",
+          "school": "下関市立勝山中学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "3年生",
+          "attendants": "1",
+          "wants_school_notice": "いいえ",
+          "wants_uniform": "",
+          "wants_consultation": "",
+          "channel": "学校案内パンフレット",
+          "reason": "生徒だけで企画・運営していると知って面白そうだったから",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-06-28",
+          "prefecture": "山口県"
         }
       ]
     },
     "0829_elm": {
-      "imported_at": "2026-06-28T01:12:31.128Z",
+      "imported_at": "2026-06-28T12:48:42.580Z",
       "count": 12,
       "rows": [
         {
