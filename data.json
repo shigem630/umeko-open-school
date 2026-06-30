@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-06-29T12:28:58.359Z",
+  "exportedAt": "2026-06-30T06:36:37.912Z",
   "slots": {
     "0725_jhs": {
-      "imported_at": "2026-06-29T12:28:31.714Z",
-      "count": 81,
+      "imported_at": "2026-06-30T06:36:02.782Z",
+      "count": 82,
       "rows": [
         {
           "blend_id": "371690",
@@ -1868,12 +1868,35 @@
           "free_comment": "",
           "applied_at": "2026-06-27",
           "prefecture": "山口県"
+        },
+        {
+          "blend_id": "422984",
+          "plusseed_id": "450746",
+          "app_no": "87",
+          "gender": "男性",
+          "school": "北九州市立門司中学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "3年生",
+          "attendants": "",
+          "wants_school_notice": "いいえ",
+          "wants_uniform": "了承しました。",
+          "wants_consultation": "承知しました。",
+          "channel": "学校案内パンフレット",
+          "reason": "チラシやポスターのメッセージ（ありのまま、など）に共感した為",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-06-29",
+          "prefecture": "福岡県"
         }
       ]
     },
     "0725_elm": {
-      "imported_at": "2026-06-29T12:28:28.445Z",
-      "count": 47,
+      "imported_at": "2026-06-30T06:36:19.223Z",
+      "count": 46,
       "rows": [
         {
           "blend_id": "371808",
@@ -2865,29 +2888,6 @@
           "prefecture": "山口県"
         },
         {
-          "blend_id": "407822",
-          "plusseed_id": "237875",
-          "app_no": "44",
-          "gender": "女性",
-          "school": "美祢市立大嶺小学校",
-          "cram_school": "",
-          "attended": "未登録",
-          "grade": "6年生",
-          "attendants": "1",
-          "wants_school_notice": "",
-          "wants_uniform": "了承しました。",
-          "wants_consultation": "いいえ",
-          "channel": "知人・友人・家族から聞いた",
-          "reason": "生徒だけで企画・運営していると知って面白そうだったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
-          "applied_at": "2026-06-23",
-          "prefecture": "山口県"
-        },
-        {
           "blend_id": "408079",
           "plusseed_id": "438740",
           "app_no": "45",
@@ -2959,7 +2959,7 @@
       ]
     },
     "0829_jhs": {
-      "imported_at": "2026-06-29T12:28:42.941Z",
+      "imported_at": "2026-06-30T06:36:14.982Z",
       "count": 32,
       "rows": [
         {
@@ -3701,8 +3701,8 @@
       ]
     },
     "0829_elm": {
-      "imported_at": "2026-06-29T12:28:40.040Z",
-      "count": 12,
+      "imported_at": "2026-06-30T06:36:22.659Z",
+      "count": 14,
       "rows": [
         {
           "blend_id": "386679",
@@ -3979,32 +3979,57 @@
           "free_comment": "",
           "applied_at": "2026-06-25",
           "prefecture": "山口県"
+        },
+        {
+          "blend_id": "423629",
+          "plusseed_id": "237875",
+          "app_no": "13",
+          "gender": "女性",
+          "school": "美祢市立大嶺小学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "6年生",
+          "attendants": "1",
+          "wants_school_notice": "",
+          "wants_uniform": "",
+          "wants_consultation": "いいえ",
+          "channel": "知人・友人・家族から聞いた",
+          "reason": "生徒だけで企画・運営していると知って面白そうだったから",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-06-30",
+          "prefecture": "山口県"
+        },
+        {
+          "blend_id": "423683",
+          "plusseed_id": "451258",
+          "app_no": "14",
+          "gender": "女性",
+          "school": "美祢市立大嶺小学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "6年生",
+          "attendants": "1",
+          "wants_school_notice": "",
+          "wants_uniform": "",
+          "wants_consultation": "いいえ",
+          "channel": "知人・友人・家族から聞いた",
+          "reason": "生徒だけで企画・運営していると知って面白そうだったから",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-06-30",
+          "prefecture": "山口県"
         }
       ]
     }
   },
-  "annotations": {
-    "0725": [
-      {
-        "id": "mq9hoca7n2t",
-        "date": "2026-06-11",
-        "text": "8月OS申込開始+LINE配信(135名)",
-        "type": "sns"
-      },
-      {
-        "id": "mqcyr81gqxt",
-        "date": "2026-06-14",
-        "text": "Meta広告出稿開始(AM)",
-        "type": "sns"
-      },
-      {
-        "id": "mqti5j5b47i",
-        "date": "2026-06-25",
-        "text": "公式LINE特典動画追加",
-        "type": "sns"
-      }
-    ]
-  },
+  "annotations": {},
   "goals": {
     "1107": 60,
     "1128": 60,
