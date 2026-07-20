@@ -86,7 +86,10 @@ const CSV_COLUMN_MAP = {
 
   '個人相談を希望しますか？': 'wants_consultation',
   '個人相談は、申込上限に達したため終了いたしました。': 'wants_consultation', // 上限後の新列名
+  '個別相談を希望しますか？': 'wants_consultation',                          // 小学生CSV用
+  '個別相談は、申込上限に達したため終了いたしました。': 'wants_consultation', // 小学生CSV・上限後
   '個人相談を希望される場合、現時点でのもので構いませんので、相談内容をご入力ください。': 'consultation_detail',
+  '個別相談を希望される場合、現時点でのもので構いませんので、相談内容をご入力ください。': 'consultation_detail', // 小学生CSV用
 
   // 申込経路（小学生CSVは末尾の「）」が1つ多い）
   '本校のオープンスクールを知った一番のきっかけは何ですか？（もっとも当てはまるものを１つ）': 'channel',
