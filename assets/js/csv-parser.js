@@ -85,6 +85,29 @@ function normalizeRow(raw, year = new Date().getFullYear()) {
     }
   }
 
+  // ===== フォールバック: 制服試着・個別相談 列のキーワード検出 =====
+  // BLENDのアンケート文言は回ごとに変わる（「個人相談/個別相談」、読点の有無、
+  // 「希望しますか？」/「申込上限に達したため終了…」など）。CSV_COLUMN_MAP の
+  // 完全一致に失敗しても、キーワードで該当列を拾えるようにする。
+  if (!row.wants_uniform) {
+    for (const [k, v] of Object.entries(raw)) {
+      if (k.includes('試着') && (k.includes('希望') || k.includes('終了') || k.includes('上限'))) {
+        row.wants_uniform = (v || '').trim();
+        break;
+      }
+    }
+  }
+  if (!row.wants_consultation) {
+    for (const [k, v] of Object.entries(raw)) {
+      // 「相談内容をご入力ください」の自由記述欄は対象外（希望可否の列だけ拾う）
+      if (k.includes('相談') && !k.includes('入力') && !k.includes('内容') &&
+          (k.includes('希望しますか') || k.includes('終了') || k.includes('上限'))) {
+        row.wants_consultation = (v || '').trim();
+        break;
+      }
+    }
+  }
+
   // Parse applied_at date from "M月D日 H時mm分" format using the event year
   row.applied_at = parseAppliedDate(row.applied_at_raw, year);
   delete row.applied_at_raw;
