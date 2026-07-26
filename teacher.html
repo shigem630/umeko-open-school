@@ -336,6 +336,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('main-content').style.display = 'block';
 
+  // 複数PC対応: 開いたときにGitHubの最新公開データを取り込む（別PCの更新も反映）
+  const synced = await syncFromGitHubIfNewer();
+  if (synced) showToast('GitHubから最新の公開データを読み込みました。', 'success');
+
   // Setup upload zones
   EVENTS.forEach(event => {
     event.csvSlots.forEach(slot => {

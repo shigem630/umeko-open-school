@@ -51,6 +51,45 @@ function buildExportData() {
   };
 }
 
+// ===== 複数PC対応: GitHub公開データの取り込み =====
+// data.json の内容を localStorage に書き込み、どのPCでも最新の公開状態から作業できるようにする
+function importPublishedIntoLocal(data) {
+  if (!data) return;
+  if (data.slots) {
+    for (const slotId in data.slots) {
+      saveEventData(slotId, data.slots[slotId]);
+    }
+  }
+  if (data.annotations)       saveAnnotations(data.annotations);
+  if (data.approvedComments)  saveApprovedComments(data.approvedComments);
+  const config = getConfig();
+  if (data.goals)          config.goals = { ...config.goals, ...data.goals };
+  if (data.newVisitorGoal) config.newVisitorGoal = data.newVisitorGoal;
+  saveConfig(config);
+  if (data.exportedAt) safeSet('last_synced_at', data.exportedAt);
+}
+
+// 教員ページを開いたとき、公開中の data.json がローカルより新しければ取り込む
+// 戻り値: 取り込んだら true（別PCの更新を反映した場合など）
+async function syncFromGitHubIfNewer() {
+  try {
+    const res = await fetch('./data.json?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const localSynced  = safeGet('last_synced_at') || '';
+    const hasLocalData = EVENTS.some(e => e.csvSlots.some(s => getEventData(s.id)));
+    // ローカルにデータが無い、または公開データの方が新しい場合のみ取り込む
+    // （ローカルの未公開の編集を上書きしないための条件）
+    if (!hasLocalData || (data.exportedAt && data.exportedAt > localSynced)) {
+      importPublishedIntoLocal(data);
+      return true;
+    }
+  } catch (_) {
+    // オフライン・data.json未公開などは無視してローカルデータで継続
+  }
+  return false;
+}
+
 // ===== DOWNLOAD data.json =====
 function downloadPublishData() {
   const payload = buildExportData();
@@ -152,6 +191,8 @@ async function publishToGitHub() {
     });
 
     if (putRes.ok) {
+      // このPCが公開した内容を「同期済み」として記録し、次回開いたとき自分の公開を再取込しないようにする
+      if (payload.exportedAt) safeSet('last_synced_at', payload.exportedAt);
       showToast('GitHubに公開しました。約30秒後に生徒用ページに反映されます。', 'success');
     } else {
       const err = await putRes.json();
