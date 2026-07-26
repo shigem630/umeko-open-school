@@ -539,19 +539,17 @@ function buildAfterPanelHTML(key) {
     <div class="post-event-intro">
       イベント終了後に参加者が回答したアンケートの集計です。CSVに満足度データが含まれると自動で表示されます。
     </div>
-    <div class="chart-row-2col">
-      <div class="card">
-        <div class="card-title">😊 総合満足度</div>
-        <div id="satisfaction-${key}-wrapper" style="position:relative;height:200px"><canvas id="satisfaction-${key}"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title">💡 受験意欲の変化</div>
-        <div id="intent-${key}-wrapper" style="position:relative;height:200px"><canvas id="intent-${key}"></canvas></div>
-      </div>
-    </div>
     <div class="card">
-      <div class="card-title">🌟 印象の変化</div>
-      <div id="impression-${key}-wrapper" style="position:relative;height:120px"><canvas id="impression-${key}"></canvas></div>
+      <div class="card-title">😊 総合満足度</div>
+      <div id="satisfaction-${key}-wrapper" style="position:relative;height:200px"><canvas id="satisfaction-${key}"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:var(--space-4)">
+      <div class="card-title">💡 受験（入学）意欲の変化</div>
+      <div id="intent-${key}-wrapper" style="position:relative;height:220px"><canvas id="intent-${key}"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:var(--space-4)">
+      <div class="card-title">🌟 梅光への印象の変化</div>
+      <div id="impression-${key}-wrapper" style="position:relative;height:200px"><canvas id="impression-${key}"></canvas></div>
     </div>
     ${commentsSection}
   `;
@@ -571,8 +569,8 @@ function renderPostEventPanel(eventKey) {
   }
 
   buildSatisfactionChart(`satisfaction-${eventKey}`, withSatisfaction);
-  buildStackedChart(`impression-${eventKey}`, getImpressionDist(withSatisfaction), '印象の変化');
-  buildStackedChart(`intent-${eventKey}`, getExamIntentDist(withSatisfaction), '受験意欲');
+  buildSentimentBarChart(`impression-${eventKey}`, getImpressionDist(withSatisfaction));
+  buildSentimentBarChart(`intent-${eventKey}`, getExamIntentDist(withSatisfaction));
 
   if (!window.IS_TEACHER) return;
 

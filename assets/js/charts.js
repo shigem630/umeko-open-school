@@ -37,10 +37,13 @@ const CHANNEL_COLORS = [
 ];
 
 const SATISFACTION_COLORS = {
-  '非常に満足':    '#2E7D32',
+  '大変満足':      '#1B5E20',  // 最も良い → 最も濃い緑（一番目立つ）
+  '非常に満足':    '#1B5E20',
   '満足':         '#66BB6A',
   'どちらでもない':'#9E9E9E',
+  'やや不満':      '#EF9A9A',
   '不満':         '#EF9A9A',
+  '大変不満':      '#C62828',
   '非常に不満':    '#C62828',
 };
 
@@ -369,8 +372,8 @@ function buildSatisfactionChart(canvasId, rows) {
   const rawCounts = getSatisfactionDist(rows);
   if (!Object.keys(rawCounts).length) { destroyChart(canvasId); return null; }
 
-  // Sort in natural Likert scale order
-  const ORDER = ['非常に満足','満足','どちらでもない','不満','非常に不満'];
+  // Sort in natural Likert scale order（良い評価ほど上に来る）
+  const ORDER = ['大変満足','非常に満足','満足','どちらでもない','やや不満','不満','大変不満','非常に不満'];
   const sorted = Object.entries(rawCounts).sort(([a],[b]) => {
     const ai = ORDER.indexOf(a), bi = ORDER.indexOf(b);
     return (ai >= 0 ? ai : 99) - (bi >= 0 ? bi : 99);
@@ -435,6 +438,80 @@ function buildStackedChart(canvasId, distObj, title) {
       scales: {
         x: { stacked: true, beginAtZero: true },
         y: { stacked: true }
+      }
+    }
+  });
+}
+
+// 印象変化・受験意欲などの選択肢を「ポジティブ度」でスコア化（大きいほど良い評価）
+// 文言が変わっても拾えるようキーワードで判定する
+function _sentimentScore(label) {
+  const s = String(label);
+  if (/第一志望|絶対に入学|非常に良く|大変良く|非常に満足|大変満足/.test(s)) return 6;
+  if (/前向き|良くなった|検討したい|受験したい|入学したい|満足/.test(s))     return 5;
+  if (/もともと良かった/.test(s))                                          return 4;
+  if (/どちらでもない|まだ|わからない|比較|変わらない|未定|検討中/.test(s))   return 3;
+  if (/あまり|やや悪|悪くなった|不満|考えていない|下がった/.test(s))         return 2;
+  if (/非常に悪|大変悪|大変不満|全く|まったく/.test(s))                     return 1;
+  return 3; // 不明は中立扱い
+}
+
+const _SENTIMENT_COLORS = {
+  6: '#1B5E20', // 濃い緑（最高評価）
+  5: '#66BB6A', // 緑（良い）
+  4: '#9CCC65', // 黄緑（ポジティブ寄り）
+  3: '#9E9E9E', // グレー（中立）
+  2: '#EF9A9A', // 薄い赤（否定）
+  1: '#C62828', // 赤（強い否定）
+};
+
+// 印象変化・受験意欲などを見やすい横棒グラフで表示（ラベル全文を折り返して表示）
+function buildSentimentBarChart(canvasId, distObj) {
+  const entries = Object.entries(distObj || {});
+  if (!entries.length) { destroyChart(canvasId); return null; }
+
+  // ポジティブ度で降順ソート（良い回答を上に）。同点は件数の多い順。
+  entries.sort((a, b) => {
+    const d = _sentimentScore(b[0]) - _sentimentScore(a[0]);
+    return d !== 0 ? d : b[1] - a[1];
+  });
+
+  const fullLabels = entries.map(([l]) => l);
+  const wrapped    = fullLabels.map(l => wrapLabel(l, 24)); // 折り返して全文表示（切れない）
+  const data       = entries.map(([, v]) => v);
+  const colors     = fullLabels.map(l => _SENTIMENT_COLORS[_sentimentScore(l)] || '#9E9E9E');
+  const total      = data.reduce((s, v) => s + v, 0);
+
+  // 折り返し行数に応じて高さを確保
+  const totalLines = wrapped.reduce((s, w) => s + (Array.isArray(w) ? w.length : 1), 0);
+  const canvas = document.getElementById(canvasId);
+  if (canvas && canvas.parentElement) {
+    canvas.parentElement.style.height = Math.max(150, totalLines * 26 + entries.length * 12 + 24) + 'px';
+  }
+
+  return renderChart(canvasId, {
+    type: 'bar',
+    data: { labels: wrapped, datasets: [{ data, backgroundColor: colors, borderRadius: 4 }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { left: 4 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (ctx) => fullLabels[ctx[0].dataIndex] || '',
+            label: (ctx) => {
+              const pct = total > 0 ? Math.round(ctx.parsed.x * 100 / total) : 0;
+              return ` ${ctx.parsed.x}件（${pct}%）`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 } },
+        y: { ticks: { autoSkip: false, font: { size: 12 } } }
       }
     }
   });
