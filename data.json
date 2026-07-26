@@ -1,9 +1,9 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-07-26T01:06:44.681Z",
+  "exportedAt": "2026-07-26T12:50:02.567Z",
   "slots": {
     "0725_jhs": {
-      "imported_at": "2026-07-25T23:47:24.357Z",
+      "imported_at": "2026-07-26T12:49:02.014Z",
       "count": 86,
       "rows": [
         {
@@ -113,11 +113,11 @@
           "wants_consultation": "2",
           "channel": "新しいポスター・チラシ（青空のデザインのもの）",
           "reason": "生徒だけで企画・運営していると知って面白そうだったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "satisfaction": "大変満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
+          "impression_change": "非常に良くなった",
+          "exam_intent": "第一志望として受験したい（絶対に入学したい）",
+          "free_comment": "この度は、素晴らしいオープンスクールを開催していただき誠にありがとうございました。\r\n\r\n数ある学校の中でも、貴校のオープンスクールを最も楽しみにして参加させていただきましたところ、期待を遥かに上回る素晴らしい時間を過ごさせていただきました。\r\n\r\n生徒の皆様が主体となり、生き生きと運営されている姿に深く感銘を受けるとともに、今日に至るまでの多大なご努力が強く伝わってまいりました。特に、制服試着を担当してくださった男女の生徒様は大変親切で、学校の魅力を丁寧に教えてくださり感謝しております。\r\n\r\n帰宅後も、子どもが「本当に楽しかった」と目を輝かせながら何度も興奮気味に話しており、親子共々、貴校への思いをさらに強くいたしました。\r\n\r\n次回も重ねて参加してよいものかと案じておりましたが、生徒の皆様から温かいご案内をいただいたため、その場ですぐに次回の申し込みをいたしました。次回も参加させていただけることを、今から大変楽しみにしております。\r\n\r\n充実した時間を誠にありがとうございました。今後ともどうぞよろしくお願い申し上げます。",
           "applied_at": "2026-05-20",
           "prefecture": "山口県"
         },
@@ -550,11 +550,11 @@
           "wants_consultation": "2",
           "channel": "学校案内パンフレット",
           "reason": "とりあえず県内の私立校を見ておきたかったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "satisfaction": "大変満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
+          "impression_change": "非常に良くなった",
+          "exam_intent": "まだわからない・他の学校と比較したい",
+          "free_comment": "他校の子とも話すことができて楽しかったです！劇もとても面白かったです！",
           "applied_at": "2026-06-03",
           "prefecture": "山口県"
         },
@@ -665,11 +665,11 @@
           "wants_consultation": "1",
           "channel": "学校案内パンフレット",
           "reason": "生徒だけで企画・運営していると知って面白そうだったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "satisfaction": "大変満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
+          "impression_change": "非常に良くなった",
+          "exam_intent": "第一志望として受験したい（絶対に入学したい）",
+          "free_comment": "生徒さんが皆さん気持ちよく挨拶をしてくれてとても雰囲気のいい学校だなと思いました。\r\n生徒さんが主体的に取り組み作り上げようとしているのがとても伝わりました。\r\n子供も楽しかったと言っていました。\r\nありがとうございました。",
           "applied_at": "2026-06-04",
           "prefecture": "山口県"
         },
@@ -1539,11 +1539,11 @@
           "wants_consultation": "承知しました。",
           "channel": "梅光学院の公式Instagram",
           "reason": "生徒だけで企画・運営していると知って面白そうだったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "satisfaction": "満足",
+          "student_run_feedback": "良かった",
+          "impression_change": "良くなった",
+          "exam_intent": "まだわからない・他の学校と比較したい",
+          "free_comment": "とても楽しそうな学校だと感じました！",
           "applied_at": "2026-06-20",
           "prefecture": "山口県"
         },
@@ -1677,11 +1677,11 @@
           "wants_consultation": "承知しました。",
           "channel": "中学校の先生から聞いた・中学校で掲示を見た",
           "reason": "生徒だけで企画・運営していると知って面白そうだったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "satisfaction": "大変満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
+          "impression_change": "良くなった",
+          "exam_intent": "受験の候補として前向きに検討したい",
+          "free_comment": "·とても楽しいオープンスクールだったので梅光学院へ行ってみたいと思いました。",
           "applied_at": "2026-06-24",
           "prefecture": "山口県"
         },
@@ -1987,7 +1987,7 @@
       ]
     },
     "0725_elm": {
-      "imported_at": "2026-07-25T23:47:21.546Z",
+      "imported_at": "2026-07-26T12:48:59.338Z",
       "count": 47,
       "rows": [
         {
@@ -3074,8 +3074,8 @@
       ]
     },
     "0829_jhs": {
-      "imported_at": "2026-07-25T23:47:34.265Z",
-      "count": 52,
+      "imported_at": "2026-07-26T12:49:08.948Z",
+      "count": 54,
       "rows": [
         {
           "blend_id": "386687",
@@ -4272,12 +4272,58 @@
           "free_comment": "",
           "applied_at": "2026-07-26",
           "prefecture": "福岡県"
+        },
+        {
+          "blend_id": "471751",
+          "plusseed_id": "486044",
+          "app_no": "53",
+          "gender": "男性",
+          "school": "下関市立名陵中学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "3年生",
+          "attendants": "1",
+          "wants_school_notice": "はい",
+          "wants_uniform": "また別の機会に申し込みたい。",
+          "wants_consultation": "はい",
+          "channel": "中学校の先生から聞いた・中学校で掲示を見た",
+          "reason": "生徒だけで企画・運営していると知って面白そうだったから",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-07-26",
+          "prefecture": "山口県"
+        },
+        {
+          "blend_id": "472055",
+          "plusseed_id": "476205",
+          "app_no": "54",
+          "gender": "女性",
+          "school": "北九州市立菅生中学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "2年生",
+          "attendants": "1",
+          "wants_school_notice": "いいえ",
+          "wants_uniform": "了承しました。",
+          "wants_consultation": "はい",
+          "channel": "塾の先生から聞いた・塾で掲示を見た",
+          "reason": "今の学校教育やルールに違和感があり、新しい環境を見たかったか",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-07-26",
+          "prefecture": "福岡県"
         }
       ]
     },
     "0829_elm": {
-      "imported_at": "2026-07-25T23:47:30.146Z",
-      "count": 33,
+      "imported_at": "2026-07-26T12:49:05.815Z",
+      "count": 34,
       "rows": [
         {
           "blend_id": "386679",
@@ -5037,6 +5083,29 @@
           "free_comment": "",
           "applied_at": "2026-07-25",
           "prefecture": "山口県"
+        },
+        {
+          "blend_id": "472085",
+          "plusseed_id": "434479",
+          "app_no": "34",
+          "gender": "男性",
+          "school": "下関市立安岡小学校",
+          "cram_school": "",
+          "attended": "未登録",
+          "grade": "6年生",
+          "attendants": "2",
+          "wants_school_notice": "",
+          "wants_uniform": "了承しました。",
+          "wants_consultation": "いいえ",
+          "channel": "学校案内パンフレット",
+          "reason": "その他",
+          "satisfaction": "",
+          "student_run_feedback": "",
+          "impression_change": "",
+          "exam_intent": "",
+          "free_comment": "",
+          "applied_at": "2026-07-26",
+          "prefecture": "山口県"
         }
       ]
     }
@@ -5080,7 +5149,12 @@
       "386681",
       "391463",
       "402201",
-      "470667"
+      "470667",
+      "372067",
+      "379492",
+      "380339",
+      "401861",
+      "408992"
     ]
   },
   "goals": {
