@@ -89,6 +89,19 @@ function saveAnnotations(annotations) {
   safeSet('annotations', annotations);
 }
 
+// 生徒ページに公開する感想のID一覧 { [eventKey]: [blend_id, ...] }
+// 先生が明示的に選んだものだけが入る（初期は空 = 非公開）
+function getApprovedComments() {
+  if (_publishedCache && _publishedCache.approvedComments) {
+    return _publishedCache.approvedComments;
+  }
+  return safeGet('approved_comments') || {};
+}
+
+function saveApprovedComments(map) {
+  safeSet('approved_comments', map);
+}
+
 // Phase 7-6: use safeRemove for consistent prefix handling
 function clearAllData() {
   EVENTS.forEach(event => {
@@ -97,6 +110,7 @@ function clearAllData() {
     });
   });
   safeRemove('annotations');
+  safeRemove('approved_comments');
 }
 
 // Get combined rows for an event (merges jhs + elm if combined)

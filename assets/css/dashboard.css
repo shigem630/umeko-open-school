@@ -227,6 +227,59 @@
   border-left: 3px solid var(--color-primary);
 }
 
+/* ===== 感想の公開モデレーション（先生ページ）===== */
+.comment-mod-hint {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--color-gray-500);
+  margin-left: var(--space-2);
+}
+
+.comment-mod-summary {
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+  background: var(--color-primary-soft);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-1);
+}
+
+.comment-mod-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  border-left-color: var(--color-gray-300);
+}
+.comment-mod-item.is-public {
+  border-left-color: #2E7D32;
+  background: rgba(46,125,50,0.06);
+}
+
+.comment-mod-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-toggle-btn {
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-gray-300);
+  background: var(--color-white);
+  color: var(--color-gray-500);
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.comment-toggle-btn:hover { border-color: var(--color-gray-500); }
+.comment-toggle-btn.on {
+  background: #2E7D32;
+  border-color: #2E7D32;
+  color: var(--color-white);
+}
+
 /* ===== 新規来校者 累計サマリーカード ===== */
 #new-visitor-summary {
   margin-bottom: var(--space-4);

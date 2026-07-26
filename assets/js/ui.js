@@ -527,13 +527,13 @@ function buildBeforePanelHTML(key, rows = []) {
 }
 
 function buildAfterPanelHTML(key) {
-  const commentsSection = window.IS_TEACHER ? `
+  const commentsSection = `
     <div class="card" style="margin-top:var(--space-4)">
-      <div class="card-title">✏️ 感想・メッセージ一覧</div>
+      <div class="card-title">✏️ 感想・メッセージ${window.IS_TEACHER ? '<span class="comment-mod-hint">（🌐ボタンで生徒ページに公開／再度押すと非公開）</span>' : ''}</div>
       <div id="free-comments-${key}" class="feedback-list">
         <p style="color:var(--color-gray-400);font-size:var(--text-sm)">データがありません</p>
       </div>
-    </div>` : '';
+    </div>`;
 
   return `
     <div class="post-event-intro">
@@ -572,18 +572,64 @@ function renderPostEventPanel(eventKey) {
   buildSentimentBarChart(`impression-${eventKey}`, getImpressionDist(withSatisfaction));
   buildSentimentBarChart(`intent-${eventKey}`, getExamIntentDist(withSatisfaction));
 
-  if (!window.IS_TEACHER) return;
+  renderCommentsSection(eventKey, rows);
+}
 
-  // Comments (teacher only)
+// 感想一覧の描画。先生ページは公開トグル付き、生徒ページは公開済みのみ表示。
+function renderCommentsSection(eventKey, rows) {
   const comments = getFreeComments(rows);
   const commentsEl = document.getElementById(`free-comments-${eventKey}`);
-  if (commentsEl) {
+  if (!commentsEl) return;
+
+  if (window.IS_TEACHER) {
     if (!comments.length) {
       commentsEl.innerHTML = '<p style="color:var(--color-gray-400);font-size:var(--text-sm)">感想はまだありません</p>';
-    } else {
-      commentsEl.innerHTML = comments.map(c => `<div class="feedback-item">${escapeHtml(c)}</div>`).join('');
+      return;
     }
+    const approvedCount = comments.filter(c => isCommentApproved(eventKey, c.id)).length;
+    const summary = `<div class="comment-mod-summary">${comments.length}件中 <strong>${approvedCount}件</strong> を生徒ページに公開中</div>`;
+    commentsEl.innerHTML = summary + comments.map(c => {
+      const on = isCommentApproved(eventKey, c.id);
+      return `
+        <div class="feedback-item comment-mod-item${on ? ' is-public' : ''}">
+          <button class="comment-toggle-btn${on ? ' on' : ''}" data-id="${escapeHtml(c.id)}">
+            ${on ? '🌐 公開中' : '🔒 非公開'}
+          </button>
+          <span class="comment-mod-text">${escapeHtml(c.text)}</span>
+        </div>`;
+    }).join('');
+    commentsEl.querySelectorAll('.comment-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggleCommentApproval(eventKey, btn.dataset.id);
+        renderCommentsSection(eventKey, rows);
+      });
+    });
+  } else {
+    // 生徒ページ: 公開承認された感想のみ
+    const approved = comments.filter(c => isCommentApproved(eventKey, c.id));
+    if (!approved.length) {
+      commentsEl.innerHTML = '<p style="color:var(--color-gray-400);font-size:var(--text-sm)">公開されている感想はまだありません</p>';
+      return;
+    }
+    commentsEl.innerHTML = approved.map(c => `<div class="feedback-item">${escapeHtml(c.text)}</div>`).join('');
   }
+}
+
+// 感想の公開状態を判定・切替（先生ページのみ）
+function isCommentApproved(eventKey, id) {
+  const map = getApprovedComments();
+  return (map[eventKey] || []).includes(String(id));
+}
+
+function toggleCommentApproval(eventKey, id) {
+  const map = safeGet('approved_comments') || {};
+  const list = map[eventKey] || [];
+  const sid = String(id);
+  const idx = list.indexOf(sid);
+  if (idx >= 0) list.splice(idx, 1);
+  else list.push(sid);
+  map[eventKey] = list;
+  saveApprovedComments(map);
 }
 
 function showEmptyState(wrapperId, message) {

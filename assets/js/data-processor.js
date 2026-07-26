@@ -113,9 +113,16 @@ function getGradeDist(rows) {
   );
 }
 
-// Returns free comments (non-empty)
+// Returns free comments (non-empty) with a stable id for moderation
+// id は再アップロードしても変わらない BLEND管理番号（なければ申込番号）
 function getFreeComments(rows) {
-  return rows.filter(r => r.free_comment && r.free_comment.trim()).map(r => r.free_comment.trim());
+  return rows
+    .filter(r => r.free_comment && r.free_comment.trim())
+    .map(r => ({
+      id: String(r.blend_id || r.app_no || ''),
+      text: r.free_comment.trim()
+    }))
+    .filter(c => c.id);
 }
 
 // Calculate required daily pace to reach goal
