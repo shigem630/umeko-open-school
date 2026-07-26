@@ -536,7 +536,7 @@ function buildAfterPanelHTML(key) {
     </div>`;
 
   return `
-    <div class="post-event-intro">
+    <div class="post-event-intro" id="post-event-summary-${key}">
       イベント終了後に参加者が回答したアンケートの集計です。CSVに満足度データが含まれると自動で表示されます。
     </div>
     <div class="card">
@@ -572,7 +572,33 @@ function renderPostEventPanel(eventKey) {
   buildSentimentBarChart(`impression-${eventKey}`, getImpressionDist(withSatisfaction));
   buildSentimentBarChart(`intent-${eventKey}`, getExamIntentDist(withSatisfaction));
 
+  renderResponseSummary(eventKey, rows);
   renderCommentsSection(eventKey, rows);
+}
+
+// アンケート回答数のサマリー（中学生/小学生別・合計）
+function renderResponseSummary(eventKey, rows) {
+  const el = document.getElementById(`post-event-summary-${eventKey}`);
+  if (!el) return;
+  const event = EVENTS.find(e => e.key === eventKey);
+  const { total, jhs, elm } = getResponseCounts(rows);
+  const breakdown = (event && event.combined)
+    ? `<span class="resp-badge resp-jhs">中学生 ${jhs}件</span><span class="resp-badge resp-elm">小学生 ${elm}件</span>`
+    : '';
+  el.innerHTML = `
+    <div class="resp-summary-row">
+      <span class="resp-summary-label">📝 アンケート回答数</span>
+      ${breakdown}
+      <span class="resp-total">合計 <strong>${total}</strong> 件</span>
+    </div>`;
+}
+
+// 中学生/小学生 バッジ（combined イベントのみ表示）
+function slotBadgeHTML(slot, isCombined) {
+  if (!isCombined) return '';
+  if (slot === 'jhs') return '<span class="resp-badge resp-jhs">中学生</span>';
+  if (slot === 'elm') return '<span class="resp-badge resp-elm">小学生</span>';
+  return '';
 }
 
 // 感想一覧の描画。先生ページは公開トグル付き、生徒ページは公開済みのみ表示。
@@ -580,6 +606,8 @@ function renderCommentsSection(eventKey, rows) {
   const comments = getFreeComments(rows);
   const commentsEl = document.getElementById(`free-comments-${eventKey}`);
   if (!commentsEl) return;
+  const event = EVENTS.find(e => e.key === eventKey);
+  const isCombined = !!(event && event.combined);
 
   if (window.IS_TEACHER) {
     if (!comments.length) {
@@ -595,7 +623,7 @@ function renderCommentsSection(eventKey, rows) {
           <button class="comment-toggle-btn${on ? ' on' : ''}" data-id="${escapeHtml(c.id)}">
             ${on ? '🌐 公開中' : '🔒 非公開'}
           </button>
-          <span class="comment-mod-text">${escapeHtml(c.text)}</span>
+          <span class="comment-mod-text">${slotBadgeHTML(c.slot, isCombined)}${escapeHtml(c.text)}</span>
         </div>`;
     }).join('');
     commentsEl.querySelectorAll('.comment-toggle-btn').forEach(btn => {
@@ -611,7 +639,7 @@ function renderCommentsSection(eventKey, rows) {
       commentsEl.innerHTML = '<p style="color:var(--color-gray-400);font-size:var(--text-sm)">公開されている感想はまだありません</p>';
       return;
     }
-    commentsEl.innerHTML = approved.map(c => `<div class="feedback-item">${escapeHtml(c.text)}</div>`).join('');
+    commentsEl.innerHTML = approved.map(c => `<div class="feedback-item">${slotBadgeHTML(c.slot, isCombined)}${escapeHtml(c.text)}</div>`).join('');
   }
 }
 

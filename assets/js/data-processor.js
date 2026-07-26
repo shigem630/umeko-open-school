@@ -120,9 +120,18 @@ function getFreeComments(rows) {
     .filter(r => r.free_comment && r.free_comment.trim())
     .map(r => ({
       id: String(r.blend_id || r.app_no || ''),
-      text: r.free_comment.trim()
+      text: r.free_comment.trim(),
+      slot: r._slot || ''   // 'jhs'=中学生 / 'elm'=小学生
     }))
     .filter(c => c.id);
+}
+
+// アンケート回答数（満足度を回答した人）を中学生/小学生別に集計
+function getResponseCounts(rows) {
+  const responded = rows.filter(r => r.satisfaction && r.satisfaction.trim());
+  const jhs = responded.filter(r => r._slot === 'jhs').length;
+  const elm = responded.filter(r => r._slot === 'elm').length;
+  return { total: responded.length, jhs, elm };
 }
 
 // Calculate required daily pace to reach goal
