@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-08-31T13:13:27.421Z",
+  "exportedAt": "2026-09-02T12:16:19.393Z",
   "slots": {
     "0725_jhs": {
       "imported_at": "2026-08-08T12:52:52.833Z",
@@ -3074,7 +3074,7 @@
       ]
     },
     "0829_jhs": {
-      "imported_at": "2026-08-31T13:12:19.498Z",
+      "imported_at": "2026-09-02T12:15:55.601Z",
       "count": 71,
       "rows": [
         {
@@ -3207,11 +3207,11 @@
           "wants_consultation": "2",
           "channel": "学校案内パンフレット",
           "reason": "生徒だけで企画・運営していると知って面白そうだったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "satisfaction": "大変満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
+          "impression_change": "良くなった",
+          "exam_intent": "まだわからない・他の学校と比較したい",
+          "free_comment": "生徒主体でオープンスクールを企画されたと聞いて驚きました。私も高校生になったとき、自分たちで何かを作り上げる経験ができたらいいなと思いました。",
           "applied_at": "2026-06-13",
           "prefecture": "山口県"
         },
@@ -3552,11 +3552,11 @@
           "wants_consultation": "2",
           "channel": "学校案内パンフレット",
           "reason": "とりあえず県内の私立校を見ておきたかったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "satisfaction": "大変満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
+          "impression_change": "非常に良くなった",
+          "exam_intent": "第一志望として受験したい（絶対に入学したい）",
+          "free_comment": "オープンスクールお世話になり、ありがとうございました。\r\n生徒主流で考えさせることは素晴らしいなと思いました。\r\n見学をして、梅光へ行きたいという気持ちが強くなりました。\r\nとても楽しいオープンスクールでした。\r\n3高校のオープンスクールを見学しましたが、1番良かったし、1番合っているなと思いました。\r\n受験しますのでよろしくお願い致します。",
           "applied_at": "2026-06-26",
           "prefecture": "山口県"
         },
@@ -4403,11 +4403,11 @@
           "wants_consultation": "2",
           "channel": "中学校の先生から聞いた・中学校で掲示を見た",
           "reason": "生徒だけで企画・運営していると知って面白そうだったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
-          "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "satisfaction": "満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
+          "impression_change": "変わらない（もともと良かった）",
+          "exam_intent": "まだわからない・他の学校と比較したい",
+          "free_comment": "皆さんキラキラしていて\r\n楽しそうに積極的に取り組んでいるのが\r\n伝わりました?",
           "applied_at": "2026-08-05",
           "prefecture": "福岡県"
         },
@@ -4713,7 +4713,7 @@
       ]
     },
     "0829_elm": {
-      "imported_at": "2026-08-31T13:12:16.221Z",
+      "imported_at": "2026-09-02T12:15:52.689Z",
       "count": 50,
       "rows": [
         {
@@ -4823,11 +4823,11 @@
           "wants_consultation": "いいえ",
           "channel": "知人・友人・家族から聞いた",
           "reason": "その他",
-          "satisfaction": "",
-          "student_run_feedback": "",
+          "satisfaction": "大変満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
           "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "exam_intent": "受験の候補として前向きに検討したい",
+          "free_comment": "参加者を飽きさせないオープンスクールでした。生徒さんたちの梅光愛がしっかり伝わってきました！前回のオープンスクールでは時間がかなりおしたと聞いていましたが、そこをしっかり修整できていて感心しました。お手伝いの生徒さんも増えたとのことで、プロジェクトメンバーのみなさんは周りの人を人を巻き込む力もあるんですね(^^)\r\n\r\n何より生き生きとしているみなさんを見て、わが子もあんな顔で中高生活が送れると最高だなぁと思いました。今回は保護者のみの参加でしたので、次回は親子で参加させていただきたいです。\r\n\r\nオープンスクールに携わったみなさんお疲れ様でした。充実した時間をありがとうございました。",
           "applied_at": "2026-06-13",
           "prefecture": "山口県"
         },
@@ -5582,11 +5582,11 @@
           "wants_consultation": "はい",
           "channel": "梅光学院の公式Instagram",
           "reason": "その他",
-          "satisfaction": "",
-          "student_run_feedback": "",
+          "satisfaction": "大変満足",
+          "student_run_feedback": "非常に良かった（生徒の熱量やリアルな姿に共感した）",
           "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "exam_intent": "受験の候補として前向きに検討したい",
+          "free_comment": "生徒さん達が自分で考え、自分で行動されている姿に感動しました。先生方との信頼関係がしっかり出来ている証拠だと思いました。\r\nこの環境で学べる生徒さん達が羨ましいです。",
           "applied_at": "2026-08-06",
           "prefecture": "山口県"
         },
@@ -5605,11 +5605,11 @@
           "wants_consultation": "いいえ",
           "channel": "Web広告・SNS広告（スマホに流れてきた広告）",
           "reason": "今の学校教育や校則に違和感があり、新しい環境を見たかったから",
-          "satisfaction": "",
-          "student_run_feedback": "",
+          "satisfaction": "満足",
+          "student_run_feedback": "あまり良くなかった（もっと先生からの説明が欲しかった等）",
           "impression_change": "",
-          "exam_intent": "",
-          "free_comment": "",
+          "exam_intent": "受験の候補として前向きに検討したい",
+          "free_comment": "子どもが楽しかったと言っていました。ありがとうございました。",
           "applied_at": "2026-08-07",
           "prefecture": "山口県"
         },
@@ -5962,7 +5962,13 @@
       "468412",
       "397575",
       "470976",
-      "479054"
+      "479054",
+      "389456",
+      "413195",
+      "481254",
+      "389926",
+      "482672",
+      "482020"
     ]
   },
   "goals": {
