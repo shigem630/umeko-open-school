@@ -63,6 +63,7 @@ function importPublishedIntoLocal(data) {
   }
   if (data.annotations)       saveAnnotations(data.annotations);
   if (data.approvedComments)  saveApprovedComments(data.approvedComments);
+  if (data.examShared)        safeSet('exam_shared', data.examShared);  // 暗号化済みの入試データ（閲覧用パスワードで復号）
   const config = getConfig();
   if (data.goals)          config.goals = { ...config.goals, ...data.goals };
   if (data.newVisitorGoal) config.newVisitorGoal = data.newVisitorGoal;
@@ -92,9 +93,11 @@ async function syncFromGitHubIfNewer() {
 }
 
 // ===== DOWNLOAD data.json =====
-function downloadPublishData() {
+async function downloadPublishData() {
   if (!requireAdmin()) return;
   const payload = buildExportData();
+  const exam = await buildSharedExamPayload();
+  if (exam.shared) payload.examShared = exam.shared;
   if (!Object.keys(payload.slots).length) {
     showToast('エクスポートするデータがありません。先にCSVをアップロードしてください。', 'error');
     return;
@@ -160,6 +163,8 @@ async function publishToGitHub() {
     showToast('公開するデータがありません。先にCSVをアップロードしてください。', 'error');
     return;
   }
+  const exam = await buildSharedExamPayload();
+  if (exam.shared) payload.examShared = exam.shared;
 
   const btn = document.getElementById('gh-publish-btn');
   if (btn) { btn.disabled = true; btn.textContent = '公開中…'; }
@@ -196,7 +201,8 @@ async function publishToGitHub() {
     if (putRes.ok) {
       // このPCが公開した内容を「同期済み」として記録し、次回開いたとき自分の公開を再取込しないようにする
       if (payload.exportedAt) safeSet('last_synced_at', payload.exportedAt);
-      showToast('GitHubに公開しました。約30秒後に生徒用ページに反映されます。', 'success');
+      if (payload.examShared) safeSet('exam_shared', payload.examShared);
+      showToast(`GitHubに公開しました。約30秒後に生徒用ページに反映されます。${exam.note}`, 'success');
     } else {
       const err = await putRes.json();
       showToast(`公開失敗: ${err.message || '不明なエラー'}`, 'error');

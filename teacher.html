@@ -52,7 +52,7 @@
       <div class="header-actions">
         <span class="header-badge" id="header-role-badge">🔒 教員専用</span>
         <a href="index.html" class="btn btn-secondary btn-sm">生徒用ページ</a>
-        <button class="btn btn-secondary btn-sm" onclick="window.print()">印刷</button>
+        <button class="btn btn-secondary btn-sm btn-print" onclick="window.print()">印刷</button>
       </div>
     </div>
   </header>
@@ -218,9 +218,9 @@
       <div class="upload-event-group exam-upload-group">
         <div class="upload-event-header">
           <span class="upload-event-date">入試データ（受験者一覧）</span>
-          <span class="exam-private-badge">🔒 教員ページのみ・公開されません</span>
+          <span class="exam-private-badge">🔒 生徒用ページには表示されません</span>
         </div>
-        <p class="exam-upload-desc">BLENDの「〇〇選抜_受験者一覧.csv」（入試区分ごと・すべて）と「合格者一覧.csv」を選択（またはドラッグ）してください。まとめて入れても、あとから合格者一覧だけを追加しても構いません。<br>このパソコンに保存するのは <strong>受験番号・中学校・入試区分・専願/併願・OS参加の有無・合格/入学</strong> のみで、氏名・住所・連絡先は保存しません。「🚀 GitHubに公開」でも公開されません。</p>
+        <p class="exam-upload-desc">BLENDの「〇〇選抜_受験者一覧.csv」（入試区分ごと・すべて）と「合格者一覧.csv」を選択（またはドラッグ）してください。まとめて入れても、あとから合格者一覧だけを追加しても構いません。<br>このパソコンに保存するのは <strong>受験番号・中学校・入試区分・専願/併願・OS参加の有無・合格/入学</strong> のみで、氏名・住所・連絡先は保存しません。<br>「🚀 GitHubに公開」を押すと、このデータを<strong>閲覧用パスワードで暗号化</strong>して共有し、教職員が閲覧用パスワードでログインしたときだけ表示されます（初回は閲覧用パスワードの入力を求めます）。暗号化していない状態では公開されません。</p>
         <label class="upload-zone exam-upload-zone" id="exam-upload-zone">
           <input type="file" accept=".csv" multiple>
           <div class="upload-zone-icon">📋</div>
@@ -366,7 +366,7 @@
             GitHubの Personal Access Token（<code>Contents</code> の Read &amp; Write 権限）を設定してください。<br>
             設定は <strong>このブラウザにのみ</strong> 保存されます。共有PCでは使用しないでください。
           </p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3)">
+          <div class="gh-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3)">
             <div class="form-group">
               <label class="form-label">GitHubユーザー名 <span style="color:var(--color-error);font-size:var(--text-xs)">※必須</span></label>
               <input type="text" id="gh-owner" class="form-input" placeholder="例: shigem630">
@@ -439,6 +439,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 複数PC対応: 開いたときにGitHubの最新公開データを取り込む（別PCの更新も反映）
   const synced = await syncFromGitHubIfNewer();
   if (synced) showToast('GitHubから最新の公開データを読み込みました。', 'success');
+
+  // 共有された入試データ（暗号化）を復号。管理者PCで入試CSVを読み込んでいる場合はそちらを優先
+  await loadSharedExamRecords();
 
   // 以降の読込・設定・公開の準備は管理者のみ
   if (!window.IS_ADMIN) {

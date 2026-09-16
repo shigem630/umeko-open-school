@@ -29,6 +29,25 @@ async function checkPassword(input) {
   return null;
 }
 
+// 閲覧用パスワードから、入試データ共有用の暗号鍵（AES-256）を作る。戻り値は Base64
+async function deriveExamShareKey(password) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(EXAM_SHARE_SALT), iterations: 250000, hash: 'SHA-256' }, base, 256);
+  return bytesToBase64(new Uint8Array(bits));
+}
+
+function bytesToBase64(bytes) {
+  let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+
+function base64ToBytes(b64) {
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+
 // ===== 権限（管理者／閲覧のみ）=====
 function _setRole(role) {
   window.USER_ROLE = role;
@@ -94,6 +113,10 @@ function _awaitLogin() {
       if (role) {
         _setRole(role);
         sessionStorage.setItem('umeko_auth', role);
+        // 閲覧用：共有された入試データを読むための鍵を、このタブを閉じるまで保持
+        if (role === 'staff') {
+          try { sessionStorage.setItem('umeko_exam_key', await deriveExamShareKey(password)); } catch (_) {}
+        }
         if (overlay) overlay.style.display = 'none';
         resolve(true);
         return;

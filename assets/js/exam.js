@@ -2,13 +2,66 @@
 // BLENDの「〇〇選抜_受験者一覧.csv」と「合格者一覧.csv」を読み込み、この端末のブラウザ（localStorage）にだけ保存する。
 // 保存するのは 受験番号・プラスシードID・中学校・入試区分・専願/併願・OS参加有無・合格/入学 のみ。
 // 氏名・ふりがな・住所・電話・メール・保護者名などは読み込んだ時点で捨て、保存しない。
-// data.json（公開用）には含めない（publish.js の buildExportData は exam_records を出力しない）。
+// 教職員への共有：公開時に、この保存データを閲覧用パスワードから作った鍵で暗号化（AES-GCM）して data.json の examShared に入れる。
+// 暗号化していない入試データは data.json に含めない。閲覧用パスワードでログインした人だけが復号して表示できる。
 
 const EXAM_STORAGE_KEY = 'exam_records';
+const EXAM_SHARED_KEY = 'exam_shared';        // data.json から取り込んだ暗号化データ
+const EXAM_SHARE_KEY_KEY = 'exam_share_key';  // 管理者PCに保存する共有用の鍵（閲覧用パスワードは保存しない）
+let _sharedExamRecords = null;                // 復号した共有データ（メモリ上のみ）
 
 function _getExamRecords() {
   safeRemove('exam_summary'); // 旧形式（人数のみ）は合格者と照合できないため破棄 → 再読込を案内
-  return safeGet(EXAM_STORAGE_KEY);
+  return safeGet(EXAM_STORAGE_KEY) || _sharedExamRecords;
+}
+
+async function _importAesKey(b64) {
+  return crypto.subtle.importKey('raw', base64ToBytes(b64), 'AES-GCM', false, ['encrypt', 'decrypt']);
+}
+
+// 公開用：入試データを暗号化して返す（入試データが無ければ、取り込み済みの共有データをそのまま引き継ぐ）
+// 戻り値: { shared: 暗号化データ or null, note: 利用者への補足 }
+async function buildSharedExamPayload() {
+  const rec = safeGet(EXAM_STORAGE_KEY);
+  if (!rec) return { shared: safeGet(EXAM_SHARED_KEY), note: '' };
+
+  // 閲覧用パスワードが変更されていたら、保存済みの鍵は使わず入力し直してもらう
+  const saved = safeGet(EXAM_SHARE_KEY_KEY);
+  let keyB64 = saved && saved.hash === STAFF_PASSWORD_HASH ? saved.key : null;
+  if (!keyB64) {
+    const pw = prompt('入試データを教職員にも共有するため、教職員に伝えた「閲覧用パスワード」を入力してください。\n（このパソコンでは初回のみ。キャンセルすると入試データは共有されません）');
+    if (!pw) return { shared: null, note: '入試データは共有していません。' };
+    if (await hashPassword(pw) !== STAFF_PASSWORD_HASH) {
+      showToast('閲覧用パスワードが違います。入試データは共有していません。', 'error');
+      return { shared: null, note: '入試データは共有していません。' };
+    }
+    keyB64 = await deriveExamShareKey(pw);
+    safeSet(EXAM_SHARE_KEY_KEY, { hash: STAFF_PASSWORD_HASH, key: keyB64 });
+  }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await _importAesKey(keyB64),
+    new TextEncoder().encode(JSON.stringify(rec)));
+  return { shared: { v: 1, iv: bytesToBase64(iv), data: bytesToBase64(new Uint8Array(cipher)) }, note: '入試データも教職員に共有しました。' };
+}
+
+// 閲覧用：取り込み済みの暗号化データを復号してメモリに置く
+// 戻り値: 'ok' / 'nodata'（共有なし）/ 'nokey'（鍵なし＝入り直しが必要）/ 'fail'（パスワード変更などで復号不可）
+let _sharedExamStatus = 'nodata';
+async function loadSharedExamRecords() {
+  _sharedExamRecords = null;
+  const blob = safeGet(EXAM_SHARED_KEY);
+  if (!blob || !blob.data) return (_sharedExamStatus = 'nodata');
+  const saved = safeGet(EXAM_SHARE_KEY_KEY);
+  const keyB64 = sessionStorage.getItem('umeko_exam_key') || (saved && saved.key);
+  if (!keyB64) return (_sharedExamStatus = 'nokey');
+  try {
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64ToBytes(blob.iv) },
+      await _importAesKey(keyB64), base64ToBytes(blob.data));
+    _sharedExamRecords = JSON.parse(new TextDecoder().decode(plain));
+    return (_sharedExamStatus = 'ok');
+  } catch (_) {
+    return (_sharedExamStatus = 'fail');
+  }
 }
 
 function clearExamSummary() {
@@ -270,12 +323,16 @@ function renderExamSection() {
   const sub = document.getElementById('exam-section-subtitle');
   if (!ex) {
     if (sub) sub.textContent = '教員ページのみに表示され、生徒ページには公開されません';
-    body.innerHTML = window.IS_ADMIN
-      ? '<p class="gap-empty" style="text-align:center">「データ管理」の「入試データ」欄から、BLENDの受験者一覧・合格者一覧のCSVを読み込むと表示されます。</p>'
-      : '<p class="gap-empty" style="text-align:center">入試データは氏名等を含むため公開しておらず、管理者のパソコンでのみ表示されます。</p>';
+    const staffMsg = {
+      nokey: '入試データを表示するには、いったんこのタブを閉じ、閲覧用パスワードでもう一度ログインしてください。',
+      fail:  '入試データを表示できませんでした。閲覧用パスワードが変更された可能性があります。管理者にお問い合わせください。',
+    }[_sharedExamStatus] || '入試データはまだ共有されていません。管理者が公開すると表示されます。';
+    body.innerHTML = `<p class="gap-empty" style="text-align:center">${window.IS_ADMIN
+      ? '「データ管理」の「入試データ」欄から、BLENDの受験者一覧・合格者一覧のCSVを読み込むと表示されます。'
+      : staffMsg}</p>`;
     return;
   }
-  if (sub) sub.textContent = `${ex.fiscal || '入試'}の受験者・合格者・入学者（BLENDより）。教員ページのみに表示され、公開されません`;
+  if (sub) sub.textContent = `${ex.fiscal || '入試'}の受験者・合格者・入学者（BLENDより）。教員ページのみに表示され、生徒用ページには表示されません`;
 
   const pen = typeof getJhsPenetration === 'function' ? getJhsPenetration() : null;
   const visitors = {};

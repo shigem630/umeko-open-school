@@ -161,6 +161,8 @@ const DEFAULT_PASSWORD_HASH = '0d93c139337b3c8c7ea3c3166896afd4f78ed6637edc68d45
 
 // 閲覧用パスワード（教職員向け）。このパスワードで入ると表示のみで、CSV読込・設定・公開・リセットなどの操作はできない。
 // 変更するときは新しいパスワードの SHA-256 をここに書く（設定画面からは変更できない）
+// 入試データを教職員に共有するときの暗号化（閲覧用パスワードから鍵を作る）に使う固定値。変えると共有済みデータが読めなくなる
+const EXAM_SHARE_SALT = 'umeko-open-school/exam-share/v1';
 const STAFF_PASSWORD_HASH = '048a63ab42c37ffb53884da275d79be059a9868928564def0c6836cd4fd671af';
 
 const APP_VERSION = '1.0';
