@@ -208,6 +208,22 @@
           </div>
         </div>
       </div>
+
+      <!-- 入試データ（教員のみ・公開しない） -->
+      <div class="upload-event-group exam-upload-group">
+        <div class="upload-event-header">
+          <span class="upload-event-date">入試データ（受験者一覧）</span>
+          <span class="exam-private-badge">🔒 教員ページのみ・公開されません</span>
+        </div>
+        <p class="exam-upload-desc">BLENDの「〇〇選抜_受験者一覧.csv」を<strong>すべてまとめて</strong>選択（またはドラッグ）してください。学校別・入試区分別の人数だけをこのパソコンに保存し、氏名・住所・連絡先は保存しません。「🚀 GitHubに公開」でも公開されません。</p>
+        <label class="upload-zone exam-upload-zone" id="exam-upload-zone">
+          <input type="file" accept=".csv" multiple>
+          <div class="upload-zone-icon">📋</div>
+          <div class="upload-zone-label">クリックまたはドラッグ&ドロップ（複数ファイル可）</div>
+          <div class="upload-zone-hint">.csvファイル</div>
+        </label>
+        <div id="exam-upload-state" class="exam-upload-state"></div>
+      </div>
     </section>
 
     <!-- Section 3: Event Detail Tabs -->
@@ -265,6 +281,19 @@
         <div id="school-map" class="school-map" data-analysis="1"></div>
         <div id="school-map-caption" class="map-caption"></div>
         <div id="school-gap-lists" class="gap-lists"></div>
+      </div>
+    </section>
+
+    <!-- Section 3.7: 入試の受験者（教員のみ・公開しない）-->
+    <section class="school-map-section">
+      <div class="section-header st-header">
+        <div>
+          <h2 class="section-title">📋 入試の受験者数（学校別）</h2>
+          <p class="section-subtitle" id="exam-section-subtitle"></p>
+        </div>
+      </div>
+      <div class="card">
+        <div id="exam-section-body"></div>
       </div>
     </section>
 
@@ -382,6 +411,7 @@
 <script src="assets/js/schools-geo.js"></script>
 <script src="assets/js/schools-master.js"></script>
 <script src="assets/js/map.js"></script>
+<script src="assets/js/exam.js"></script>
 <script src="assets/js/ui.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/publish.js"></script>
@@ -423,6 +453,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initEventTabs();
   renderSchoolTotals('jhs');
   renderSchoolMap('jhs');
+  setupExamUpload();
+  renderExamSection();
   initPublishUI();
 });
 

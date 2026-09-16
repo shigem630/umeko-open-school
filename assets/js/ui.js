@@ -325,6 +325,9 @@ function buildBeforePanelHTML(key, rows = []) {
   const uniformRow = optionRow('👔 制服試着申込', '次回試着希望', jhsOpt.uniform, elmOpt ? elmOpt.uniform : null);
   const consultRow = optionRow('💬 個別相談申込', '定員超過・次回希望', jhsOpt.consult, elmOpt ? elmOpt.consult : null);
 
+  const musicSummary = isCombined ? getMusicSummary(key) : null;
+  const musicHc = musicSummary ? musicSummary.headcount : null;
+
   // 来場見込み: combined は中学生/小学生を分けて表示
   const headcountRow = rows.length > 0 ? (isCombined ? `
     <div class="breakdown-headcount-split">
@@ -338,10 +341,16 @@ function buildBeforePanelHTML(key, rows = []) {
         <span class="breakdown-hc-detail">申込${elmHc.students}＋保護者等${elmHc.guardians}</span>
         <span class="breakdown-hc-value">${elmHc.total}人</span>
       </div>
+      ${musicHc ? `
+      <div class="breakdown-hc-row music">
+        <span class="breakdown-hc-type">音楽科</span>
+        <span class="breakdown-hc-detail">申込${musicHc.students}＋保護者・同伴者${musicHc.guardians}</span>
+        <span class="breakdown-hc-value">${musicHc.total}人</span>
+      </div>` : ''}
       <div class="breakdown-hc-row total">
         <span class="breakdown-hc-type">合計 来場見込み</span>
         <span class="breakdown-hc-detail"></span>
-        <span class="breakdown-hc-value total">${hc.total}人</span>
+        <span class="breakdown-hc-value total">${hc.total + (musicHc ? musicHc.total : 0)}人</span>
       </div>
     </div>
   ` : `
@@ -351,6 +360,21 @@ function buildBeforePanelHTML(key, rows = []) {
       <span class="breakdown-headcount-sub">（申込${hc.students}＋保護者等${hc.guardians}）</span>
     </div>
   `) : '';
+
+  // 音楽科体験レッスン会（7/25・8/29）。データがあれば合計に加えて表示
+  const music = musicSummary;
+  const attendedCount = list => list.filter(r => r.attended === '来場済み').length;
+  const attendedRow = (music && isCombined) ? (() => {
+    const j = attendedCount(jhsRows), e = attendedCount(elmRows), m = music.attended;
+    return `
+      <div class="breakdown-attended-row">
+        <span class="breakdown-attended-label">うち来場済み</span>
+        <span>中学生 ${j}人</span><span>小学生 ${e}人</span><span>音楽科 ${m}人</span>
+        <span class="breakdown-attended-total">合計 <strong>${j + e + m}人</strong></span>
+      </div>`;
+  })() : '';
+  const overlapNote = (music && music.overlapWithOs > 0) ? `
+      <div class="breakdown-overlap-note">※ オープンスクールと音楽科の両方に申し込んだ人が${music.overlapWithOs}人いるため、実人数は${rows.length + music.headcount.students - music.overlapWithOs}人です</div>` : '';
 
   const breakdownCard = isCombined ? `
     <div class="card breakdown-card">
@@ -364,15 +388,24 @@ function buildBeforePanelHTML(key, rows = []) {
           <div class="breakdown-stat-label">小学生（午後）</div>
           <div class="breakdown-stat-count">${elmCount}<span class="breakdown-unit">人</span></div>
         </div>
+        ${music ? `
+        <div class="breakdown-stat-op">＋</div>
+        <div class="breakdown-stat">
+          <div class="breakdown-stat-label">音楽科</div>
+          <div class="breakdown-stat-count">${music.headcount.students}<span class="breakdown-unit">人</span></div>
+        </div>` : ''}
         <div class="breakdown-stat-op">＝</div>
         <div class="breakdown-stat total">
-          <div class="breakdown-stat-label">合計</div>
-          <div class="breakdown-stat-count">${rows.length}<span class="breakdown-unit">人</span></div>
+          <div class="breakdown-stat-label">${music ? '総合計' : '合計'}</div>
+          <div class="breakdown-stat-count">${rows.length + (music ? music.headcount.students : 0)}<span class="breakdown-unit">人</span></div>
         </div>
       </div>
+      ${music ? `<div class="breakdown-total-note">オープンスクール（中学生＋小学生）${rows.length}人 ＋ 音楽科 ${music.headcount.students}人</div>` : ''}
+      ${attendedRow}${overlapNote}
       ${visitorRow}
       ${headcountRow}
       ${uniformRow}${consultRow}
+      ${music ? buildMusicDetailsHTML(music) : ''}
     </div>
   ` : rows.length > 0 ? `
     <div class="card breakdown-card single-event-breakdown">
@@ -387,7 +420,6 @@ function buildBeforePanelHTML(key, rows = []) {
 
   return `
     ${breakdownCard}
-    ${buildMusicCardHTML(key)}
     <div class="card chart-row">
       <div class="chart-toolbar">
         <div class="chart-title">📈 日別申込推移</div>
@@ -527,46 +559,32 @@ function buildBeforePanelHTML(key, rows = []) {
   `;
 }
 
-// 音楽科体験レッスン会（7/25・8/29のみ。CSV未読込なら表示しない）
-function buildMusicCardHTML(key) {
-  const m = getMusicSummary(key);
-  if (!m) return '';
+// 音楽科体験レッスン会の内訳（内訳カードの末尾に折りたたみで表示）
+function buildMusicDetailsHTML(m) {
   const chips = list => list.length
-    ? list.map(([name, n]) => `<span class="music-chip">${escapeHtml(name)}<b>${n}人</b></span>`).join('')
+    ? list.map(([name, n]) => `<span class="music-chip">${escapeHtml(name)} ${n}</span>`).join('')
     : '<span class="music-none">回答なし</span>';
   const item = (label, body) => `
     <div class="music-row">
       <div class="music-row-label">${label}</div>
       <div class="music-row-body">${body}</div>
     </div>`;
-  const hc = m.headcount;
   return `
-    <div class="card music-card">
-      <div class="music-head">
-        <div class="card-title" style="margin-bottom:0">🎹 音楽科体験レッスン会</div>
-        <div class="music-note">中学生・小学生の集計（上記・下記のグラフ）には含めていません</div>
-      </div>
-      <div class="music-stats">
-        <div class="music-stat"><span class="music-stat-label">申込</span><span class="music-stat-value">${hc.students}<small>人</small></span></div>
-        <div class="music-stat"><span class="music-stat-label">保護者・同伴者</span><span class="music-stat-value">${hc.guardians}<small>人</small></span></div>
-        <div class="music-stat total"><span class="music-stat-label">来場見込み</span><span class="music-stat-value">${hc.total}<small>人</small></span></div>
-      </div>
-      ${m.visitorAvailable ? `
-      <div class="breakdown-visitor-row">
-        <span class="breakdown-visitor-new">🆕 新規 ${m.newcomers}人</span>
-        <span class="breakdown-visitor-return">🔁 再訪 ${m.returning}人</span>
-      </div>` : ''}
+    <details class="music-details">
+      <summary>🎹 音楽科体験レッスン会の内訳（専攻・希望・中学校など）</summary>
       <div class="music-rows">
+        ${m.visitorAvailable ? item('新規・再訪', `<span class="music-chip">新規 ${m.newcomers}</span><span class="music-chip">再訪 ${m.returning}</span>`) : ''}
         ${item('専攻・楽器', chips(m.majors))}
         ${item('学年', chips(m.grades))}
-        ${item('希望・参加状況', `
-          <span class="music-chip">ソルフェージュ希望<b>${m.solfege}人</b></span>
-          <span class="music-chip">個別面談希望<b>${m.consult}人</b></span>
-          <span class="music-chip">同日の普通科OSにも参加<b>${m.generalOs}人</b></span>`)}
+        ${item('希望・参加', `
+          <span class="music-chip">ソルフェージュ希望 ${m.solfege}</span>
+          <span class="music-chip">個別面談希望 ${m.consult}</span>
+          <span class="music-chip">同日の普通科OSにも参加 ${m.generalOs}</span>`)}
         ${item('知ったきっかけ', chips(m.channels))}
         ${item('中学校', chips(m.schools))}
       </div>
-    </div>`;
+      <div class="music-unit-note">数字は人数です。中学生・小学生のグラフには含めていません。</div>
+    </details>`;
 }
 
 function buildAfterPanelHTML(key) {

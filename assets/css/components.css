@@ -399,6 +399,7 @@
 
 /* ===== UPLOAD ZONE ===== */
 .upload-zone {
+  display: block;
   border: 2px dashed var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-6);

@@ -232,6 +232,8 @@ function getMusicSummary(eventKey) {
       .forEach(r => { if (r.plusseed_id) previousIds.add(r.plusseed_id); });
   }
   const withId = rows.filter(r => r.plusseed_id);
+  // 同じ日のオープンスクール（中学生・小学生）にも申し込んでいる人（プラスシードIDで照合）
+  const osIds = new Set(getEventRows(eventKey).map(r => r.plusseed_id).filter(Boolean));
 
   return {
     headcount: getHeadcount(rows),
@@ -245,6 +247,8 @@ function getMusicSummary(eventKey) {
     returning: withId.filter(r => previousIds.has(r.plusseed_id)).length,
     newcomers: withId.filter(r => !previousIds.has(r.plusseed_id)).length,
     visitorAvailable: withId.length > 0,
+    attended: rows.filter(r => r.attended === '来場済み').length,
+    overlapWithOs: new Set(withId.filter(r => osIds.has(r.plusseed_id)).map(r => r.plusseed_id)).size,
   };
 }
 

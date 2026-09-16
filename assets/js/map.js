@@ -128,6 +128,10 @@ function _renderVisitedMap(label) {
 // ---- 浸透度マップ（教員ページの中学校）----
 function _renderPenetrationMap() {
   const p = getJhsPenetration();
+  // 入試データ（教員ページで読込済みの場合のみ）
+  const exam = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool() : null;
+  p.schools.forEach(s => { s.exam = exam ? (exam.map[s.name] || 0) : null; });
+  p.examFiscal = exam ? exam.fiscal : '';
   _setAnalysisPanels(true);
 
   const radiusOf = s => s.g3 ? 4 + Math.sqrt(s.g3) * 0.95 : (s.students > 0 ? 8 : 4.5);
@@ -190,10 +194,15 @@ function _addCountLabel(pos, n, onDark) {
   }).addTo(_schoolMapLayer);
 }
 
+function _examFiscalShort() {
+  const ex = typeof getExamSummary === 'function' ? getExamSummary() : null;
+  return ex && ex.fiscal ? ex.fiscal.replace('入試', '') : '入試';
+}
+
 function _penetrationPopup(s, baseRate) {
   const name = `<strong>${escapeHtml(s.name)}</strong>`;
   if (!s.g3) {
-    return `${name}<br>来場 実人数 <b>${s.students}名</b><br><span class="pen-pop-note">中3生徒数が営業リストに未登録のため、見込みは算出していません</span>`;
+    return `${name}<br>来場 実人数 <b>${s.students}名</b>${s.exam ? `<br>受験者（${escapeHtml(_examFiscalShort())}） ${s.exam}名` : ''}<br><span class="pen-pop-note">中3生徒数が営業リストに未登録のため、見込みは算出していません</span>`;
   }
   const exp = s.expected.toFixed(1);
   const gap = s.gap >= 0 ? `+${s.gap.toFixed(1)}` : s.gap.toFixed(1);
@@ -204,6 +213,7 @@ function _penetrationPopup(s, baseRate) {
       <tr><th>来場率</th><td>${(s.rate * 100).toFixed(1)}%</td></tr>
       <tr><th>来場見込み</th><td>${exp}名</td></tr>
       <tr><th>見込みとの差</th><td class="${s.gap < 0 ? 'neg' : 'pos'}">${gap}名</td></tr>
+      ${s.exam != null ? `<tr><th>受験者（${escapeHtml(_examFiscalShort())}）</th><td>${s.exam}名</td></tr>` : ''}
     </table>
     <span class="pen-pop-note">見込み＝中3生徒数×全体の来場率 ${(baseRate * 100).toFixed(1)}%</span>`;
 }
@@ -247,19 +257,21 @@ function _renderPenetrationLegend(p) {
 function _renderGapLists(p) {
   const el = document.getElementById('school-gap-lists');
   if (!el) return;
+  const hasExam = p.schools.some(s => s.exam != null);
   const row = s => {
     const lv = PENETRATION_LEVELS[s.level];
     const gap = s.gap >= 0 ? `+${s.gap.toFixed(1)}` : s.gap.toFixed(1);
     return `<tr>
       <td class="gap-name"><i style="background:${lv.fill};border-color:${lv.stroke}"></i>${escapeHtml(s.name.replace(/^.+?[市町村]立/, ''))}<span class="gap-city">${escapeHtml(s.city)}</span></td>
       <td>${s.g3}</td><td><b>${s.students}</b></td><td>${s.expected.toFixed(1)}</td>
-      <td class="${s.gap < 0 ? 'neg' : 'pos'}">${gap}</td></tr>`;
+      <td class="${s.gap < 0 ? 'neg' : 'pos'}">${gap}</td>
+      ${hasExam ? `<td>${s.exam}</td>` : ''}</tr>`;
   };
   const table = (list, empty) => list.length ? `
-    <table class="gap-table">
-      <thead><tr><th>学校</th><th>中3生徒数</th><th>来場</th><th>見込み</th><th>差</th></tr></thead>
+    <div class="gap-table-wrap"><table class="gap-table">
+      <thead><tr><th>学校</th><th>中3生徒数</th><th>来場</th><th>見込み</th><th>差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数">昨年度受験</th>` : ''}</tr></thead>
       <tbody>${list.slice(0, 10).map(row).join('')}</tbody>
-    </table>` : `<p class="gap-empty">${empty}</p>`;
+    </table></div>` : `<p class="gap-empty">${empty}</p>`;
 
   el.innerHTML = `
     <div class="gap-col">
