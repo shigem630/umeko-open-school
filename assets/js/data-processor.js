@@ -71,6 +71,56 @@ function getSchoolTotals(type) {
     .sort((a, b) => b.students - a.students || b.visits - a.visits);
 }
 
+// ===== 浸透度分析（中学校）=====
+// 学校マスタ(SCHOOLS_MASTER_JHS)の全校について、中3生徒数から見込まれる来場者数と実績を比べる。
+// 見込み = 中3生徒数 × 基準来場率（生徒数データのある学校全体の 来場実人数 ÷ 中3生徒数）
+// level: 'none'=来場なし / 'low'=見込みの半分未満 / 'mid'=標準 / 'high'=見込みの1.5倍以上 / 'nodata'=生徒数未登録
+const _SCHOOL_NAME_ALIASES = {
+  '下関市立内日中学校':     '下関市立うつい小中学校内日中学校',
+  '下関市立うつい小中学校': '下関市立うつい小中学校内日中学校',
+  '玖珂中学校':            '岩国市立玖珂中学校',
+};
+function _normSchoolName(name) {
+  const n = String(name || '').replace(/[\s\u3000]/g, '');
+  return _SCHOOL_NAME_ALIASES[n] || n;
+}
+
+function getJhsPenetration() {
+  if (typeof SCHOOLS_MASTER_JHS === 'undefined') return null;
+  const visited = {};
+  getSchoolTotals('jhs').forEach(t => { visited[_normSchoolName(t.name)] = t; });
+
+  const schools = SCHOOLS_MASTER_JHS.map(m => {
+    const t = visited[m.name];
+    return { ...m, students: t ? t.students : 0, visits: t ? t.visits : 0 };
+  });
+  const inMaster = new Set(schools.map(s => s.name));
+  const outside = Object.keys(visited)
+    .filter(n => !inMaster.has(n))
+    .map(n => visited[n]);
+
+  const sized = schools.filter(s => s.g3);
+  const sizedStudents = sized.reduce((a, s) => a + s.students, 0);
+  const sizedG3 = sized.reduce((a, s) => a + s.g3, 0);
+  const baseRate = sizedG3 > 0 ? sizedStudents / sizedG3 : 0;
+
+  schools.forEach(s => {
+    if (!s.g3) { s.level = 'nodata'; return; }
+    s.expected = s.g3 * baseRate;
+    s.gap = s.students - s.expected;
+    s.rate = s.students / s.g3;
+    const ratio = s.expected > 0 ? s.students / s.expected : 0;
+    s.level = s.students === 0 ? 'none' : ratio < 0.5 ? 'low' : ratio >= 1.5 ? 'high' : 'mid';
+  });
+
+  return {
+    schools, outside, baseRate, sizedCount: sized.length, sizedG3, sizedStudents,
+    visitedCount: schools.filter(s => s.students > 0).length,
+    shortfall: sized.filter(s => s.gap < -0.5).sort((a, b) => a.gap - b.gap),
+    surplus:   sized.filter(s => s.gap > 0.5).sort((a, b) => b.gap - a.gap),
+  };
+}
+
 // Returns top prefectures
 function getTopPrefectures(rows, n = 10) {
   const counts = countByField(rows, 'prefecture');

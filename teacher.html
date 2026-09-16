@@ -231,15 +231,22 @@
     <!-- Section 3.6: 学校マップ -->
     <section class="school-map-section">
       <div class="section-header st-header">
-        <h2 class="section-title" id="school-map-title">🗺️ 中学校マップ（来場者数）</h2>
+        <div>
+          <h2 class="section-title" id="school-map-title">🗺️ 中学校 浸透度マップ</h2>
+          <p class="section-subtitle">中3生徒数（学校の規模）と来場者数の差を学校ごとに表示（全イベント合算）</p>
+        </div>
         <div class="st-toggle">
           <button class="map-toggle-btn active" data-type="jhs" onclick="renderSchoolMap('jhs')">中学校</button>
           <button class="map-toggle-btn" data-type="elm" onclick="renderSchoolMap('elm')">小学校</button>
         </div>
       </div>
       <div class="card">
-        <div id="school-map" class="school-map"></div>
+        <div id="school-map-summary" class="pen-summary"></div>
+        <div id="school-map-legend" class="pen-legend"></div>
+        <div id="school-map-area" class="pen-area"></div>
+        <div id="school-map" class="school-map" data-analysis="1"></div>
         <div id="school-map-caption" class="map-caption"></div>
+        <div id="school-gap-lists" class="gap-lists"></div>
       </div>
     </section>
 
@@ -355,6 +362,7 @@
 <script src="assets/js/charts.js"></script>
 <script src="assets/js/annotations.js"></script>
 <script src="assets/js/schools-geo.js"></script>
+<script src="assets/js/schools-master.js"></script>
 <script src="assets/js/map.js"></script>
 <script src="assets/js/ui.js"></script>
 <script src="assets/js/auth.js"></script>
