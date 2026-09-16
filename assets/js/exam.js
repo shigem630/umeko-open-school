@@ -18,8 +18,8 @@ let _sharedExamData = null;                   // 復号した共有データ（�
 const OS_YEAR = CURRENT_YEAR;
 
 const EXAM_SIDES = {
-  high:   { label: '高校入試', audience: '中学生', schoolCol: '中学校', unit: '中学校', targetGrade: '3年生', gradeLabel: '中3', slotTypes: ['jhs', 'music'] },
-  junior: { label: '中学入試', audience: '小学生', schoolCol: '小学校', unit: '小学校', targetGrade: '6年生', gradeLabel: '小6', slotTypes: ['elm'] },
+  high:   { label: '高校入試', audience: '中学生', schoolCol: '中学校', unit: '中学校', targetGrade: '3年生', gradeLabel: '中3', otherLabel: '中2以下', slotTypes: ['jhs', 'music'] },
+  junior: { label: '中学入試', audience: '小学生', schoolCol: '小学校', unit: '小学校', targetGrade: '6年生', gradeLabel: '小6', otherLabel: '小5以下', slotTypes: ['elm'] },
 };
 
 // ===== 保存データ =====
@@ -491,11 +491,13 @@ function getExamSummary(side, fiscal) {
 
   // --- 来場者（対象学年：高校入試＝中3、中学入試＝小6。学年欄が空の回は対象学年とみなす）---
   const visitors = {};  // 人 → { school, events: Set }
+  const allVisitorKeys = new Set();  // 学年を問わない来場者（実人数）
   events.forEach((e, i) => {
     e.rows.forEach((r, j) => {
       if (!r.attended || _isTestEntry(r.school)) return;
-      if (r.grade && r.grade !== conf.targetGrade) return;
       const key = r.pid ? 'p:' + r.pid : `r:${i}:${j}`;
+      allVisitorKeys.add(key);
+      if (r.grade && r.grade !== conf.targetGrade) return;
       const v = visitors[key] || (visitors[key] = { school: _examShortSchool(r.school), events: new Set() });
       v.events.add(i);
     });
@@ -618,6 +620,9 @@ function getExamSummary(side, fiscal) {
     osEventCount: count(events, e => e.kind === 'os'),
     visitors: visitorList.length,
     visitorsApplied: count(Object.keys(visitors), k => !!persons[k]),
+    // 対象学年より下の学年の来場者（例：小5以下）。回によって学年の回答が違う人は、対象学年として来場した回があれば対象学年に数える
+    visitorsAll: allVisitorKeys.size,
+    visitorsOther: [...allVisitorKeys].filter(k => !visitors[k]).length,
     total: personList.length,
     os: count(personList, p => p.os),
     osNoRecord: count(personList, p => p.os && !visitors[p.key]),
@@ -785,7 +790,9 @@ function _examBeforeHtml(ex) {
   return `
     <div class="exam-notice"><div>${ex.fiscal}年度入試の受験者一覧・合格者一覧は、入試後（${ex.fiscal}年1〜2月）に読み込むと表示されます。現在は、${ex.osYear}年度のオープンスクールの来場状況のみです。</div></div>
     <div class="pen-summary">
-      <div class="pen-kpi"><span class="pen-kpi-label">来場者（${c.gradeLabel}・実人数）</span><span class="pen-kpi-value">${ex.visitors}<small>名</small></span><span class="pen-kpi-sub">${ex.eventCount}回分の来場記録より</span></div>
+      <div class="pen-kpi"><span class="pen-kpi-label">来場者（${c.gradeLabel}）</span><span class="pen-kpi-value">${ex.visitors}<small>名</small></span><span class="pen-kpi-sub">${ex.fiscal}年度入試の学年</span></div>
+      <div class="pen-kpi"><span class="pen-kpi-label">来場者（${c.otherLabel}）</span><span class="pen-kpi-value">${ex.visitorsOther}<small>名</small></span><span class="pen-kpi-sub">翌年度以降の入試の学年</span></div>
+      <div class="pen-kpi"><span class="pen-kpi-label">来場者 合計</span><span class="pen-kpi-value">${ex.visitorsAll}<small>名</small></span><span class="pen-kpi-sub">${ex.eventCount}回分・実人数（同じ人の複数回来場は1名）</span></div>
     </div>`;
 }
 
@@ -814,7 +821,8 @@ function _examResultHtml(ex) {
       ${kpi('入学者', P ? ex.enrolled : '—', P ? `合格者の ${_pctText(ex.enrolled, ex.passed)}` : '合格者一覧より')}
     </div>
     <div class="exam-funnel-notes">
-      ${V && A ? `<span>来場者のうち受験 <b>${ex.visitorsApplied}名（${_pctText(ex.visitorsApplied, ex.visitors)}）</b></span>` : ''}
+      ${V ? `<span>来場者 合計（実人数） <b>${ex.visitorsAll}名</b>（${c.gradeLabel} ${ex.visitors}名＋${c.otherLabel} ${ex.visitorsOther}名）</span>` : ''}
+      ${V && A ? `<span>${c.gradeLabel}の来場者のうち受験 <b>${ex.visitorsApplied}名（${_pctText(ex.visitorsApplied, ex.visitors)}）</b></span>` : ''}
       ${P ? `<span>合格したが入学しなかった人（辞退） <b>${ex.declined}名</b></span>` : ''}
       ${A && ex.multi ? `<span>複数の入試区分を受験 ${ex.multi}名</span>` : ''}
     </div>`;
@@ -953,10 +961,10 @@ function _examYearCompareHtml(side) {
     <p class="gap-desc">オープンスクールの実施回数が年度によって異なるため、来場者数は回数とあわせて比較してください。入試前の年度は、現時点の来場者数です。</p>
     <div class="exam-scroll-x">
       <table class="gap-table exam-table">
-        <thead><tr><th>募集年度</th><th>来場記録の回数</th><th>来場者（${c.gradeLabel}）</th><th>受験者</th><th>OS参加</th><th>合格者</th><th>入学者</th><th>辞退</th></tr></thead>
+        <thead><tr><th>募集年度</th><th>来場記録の回数</th><th>来場者（${c.gradeLabel}）</th><th>来場者（${c.otherLabel}）</th><th>来場者 合計</th><th>受験者</th><th>OS参加</th><th>合格者</th><th>入学者</th><th>辞退</th></tr></thead>
         <tbody>${list.map(x => `<tr>
           <td>${x.fiscal}年度募集${x.hasExam ? '' : '（入試前）'}</td>
-          <td>${x.eventCount ? x.eventCount + '回' : '—'}</td><td>${x.eventCount ? x.visitors : '—'}</td>
+          <td>${x.eventCount ? x.eventCount + '回' : '—'}</td><td>${x.eventCount ? x.visitors : '—'}</td><td>${x.eventCount ? x.visitorsOther : '—'}</td><td>${x.eventCount ? x.visitorsAll : '—'}</td>
           <td><b>${cell(x.hasApplicants, x.total)}</b></td><td>${cell(x.hasApplicants, x.os)}</td>
           <td>${cell(x.hasPasses, x.passed)}</td><td><b>${cell(x.hasPasses, x.enrolled)}</b></td><td>${cell(x.hasPasses, x.declined)}</td>
         </tr>`).join('')}</tbody>
