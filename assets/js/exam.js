@@ -12,6 +12,7 @@ function _getExamRecords() {
 }
 
 function clearExamSummary() {
+  if (!requireAdmin()) return;
   if (!confirm('読み込んだ入試データ（受験者・合格者）を削除します。よろしいですか？')) return;
   safeRemove(EXAM_STORAGE_KEY);
   showToast('入試データを削除しました。', 'success');
@@ -43,6 +44,7 @@ function _readFileText(file) {
 // 受験者一覧・合格者一覧を読み込む（どちらか一方だけでも、まとめてでも可）
 // 受験者一覧を含む場合は受験者データを入れ替え、合格者一覧を含む場合は合格者データを入れ替える
 async function importExamFiles(fileList) {
+  if (!requireAdmin()) return;
   const files = [...fileList].filter(f => f.name.toLowerCase().endsWith('.csv'));
   if (!files.length) { showToast('CSVファイル（.csv）を選択してください。', 'error'); return; }
 
@@ -268,7 +270,9 @@ function renderExamSection() {
   const sub = document.getElementById('exam-section-subtitle');
   if (!ex) {
     if (sub) sub.textContent = '教員ページのみに表示され、生徒ページには公開されません';
-    body.innerHTML = '<p class="gap-empty" style="text-align:center">「データ管理」の「入試データ」欄から、BLENDの受験者一覧・合格者一覧のCSVを読み込むと表示されます。</p>';
+    body.innerHTML = window.IS_ADMIN
+      ? '<p class="gap-empty" style="text-align:center">「データ管理」の「入試データ」欄から、BLENDの受験者一覧・合格者一覧のCSVを読み込むと表示されます。</p>'
+      : '<p class="gap-empty" style="text-align:center">入試データは氏名等を含むため公開しておらず、管理者のパソコンでのみ表示されます。</p>';
     return;
   }
   if (sub) sub.textContent = `${ex.fiscal || '入試'}の受験者・合格者・入学者（BLENDより）。教員ページのみに表示され、公開されません`;

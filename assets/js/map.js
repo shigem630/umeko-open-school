@@ -1,5 +1,5 @@
 // ===== 学校マップ（Leaflet + 国土地理院 淡色地図）=====
-// 教員ページの中学校 = 浸透度マップ（営業リストの全校を表示。丸の大きさ=中3生徒数、色=見込みに対する来場状況）
+// 教員ページの中学校 = 浸透度マップ（営業リストの全校を表示。丸の大きさ=中3生徒数、色=地域の平均並みの人数に対する来場状況）
 // それ以外（生徒ページ・小学校）= 来場者数マップ。下関市・門司区の全校（schools-area.js）は来場0も「0」で表示し、
 // それ以外の地域は来場のあった学校のみ表示する
 // 座標は schools-master.js / schools-area.js / schools-geo.js、来場者数は getSchoolTotals() を使用。
@@ -13,9 +13,9 @@ const LABEL_MIN_ZOOM = 12;     // この拡大率以上で学校名を表示
 // 浸透度の区分ごとの見た目（凡例と共通）
 const PENETRATION_LEVELS = {
   none:   { label: '来場なし',              fill: '#FFFFFF', stroke: '#C62828', weight: 3 },
-  low:    { label: '見込みの半分未満',      fill: '#F4A261', stroke: '#B85C1E', weight: 1.5 },
-  mid:    { label: '見込み程度',            fill: '#A9C4DC', stroke: '#5E84A6', weight: 1.5 },
-  high:   { label: '見込みの1.5倍以上',     fill: '#1F5F99', stroke: '#123B63', weight: 1.5 },
+  low:    { label: '平均の半分未満',        fill: '#F4A261', stroke: '#B85C1E', weight: 1.5 },
+  mid:    { label: '平均程度',              fill: '#A9C4DC', stroke: '#5E84A6', weight: 1.5 },
+  high:   { label: '平均の1.5倍以上',       fill: '#1F5F99', stroke: '#123B63', weight: 1.5 },
   nodata: { label: '生徒数データなし',      fill: '#C9C9D6', stroke: '#9E9EB8', weight: 1 },
 };
 
@@ -351,22 +351,30 @@ function _examFiscalShort() {
 function _penetrationPopup(s) {
   const name = `<strong>${escapeHtml(s.name)}</strong>`;
   if (!s.g3) {
-    return `${name}<br>来場 実人数 <b>${s.students}名</b>${s.cancels ? `<br>キャンセル ${s.cancels}名` : ''}${s.exam && (s.exam.total || s.exam.enrolled) ? `<br>${escapeHtml(_examFiscalShort())}：受験 ${s.exam.total}名・入学 ${s.exam.enrolled}名` : ''}<br><span class="pen-pop-note">中3生徒数が未登録のため、見込みは算出していません</span>`;
+    return `${name}<br>来場 実人数 <b>${s.students}名</b>${s.cancels ? `<br>キャンセル ${s.cancels}名` : ''}${s.exam && (s.exam.total || s.exam.enrolled) ? `<br>${escapeHtml(_examFiscalShort())}：受験 ${s.exam.total}名・入学 ${s.exam.enrolled}名` : ''}<br><span class="pen-pop-note">中3生徒数が未登録のため、平均並みの人数は算出していません</span>`;
   }
-  const exp = s.expected.toFixed(1);
-  const gap = s.gap >= 0 ? `+${s.gap.toFixed(1)}` : s.gap.toFixed(1);
+  const { exp, diff } = _gapNumbers(s);
   return `${name}
     <table class="pen-pop">
       <tr><th>中3生徒数</th><td>${s.g3}名</td></tr>
       <tr><th>来場 実人数</th><td><b>${s.students}名</b></td></tr>
       ${s.cancels ? `<tr><th>キャンセル</th><td>${s.cancels}名</td></tr>` : ''}
       <tr><th>来場率</th><td>${(s.rate * 100).toFixed(1)}%</td></tr>
-      <tr><th>来場見込み</th><td>${exp}名</td></tr>
-      <tr><th>見込みとの差</th><td class="${s.gap < 0 ? 'neg' : 'pos'}">${gap}名</td></tr>
+      <tr><th>平均並みの人数</th><td>${exp}名</td></tr>
+      <tr><th>平均との差</th><td class="${diff < 0 ? 'neg' : diff > 0 ? 'pos' : ''}">${_signed(diff)}名</td></tr>
       ${s.exam != null ? `<tr><th>${escapeHtml(_examFiscalShort())} 受験者</th><td>${s.exam.total}名</td></tr>
       <tr><th>${escapeHtml(_examFiscalShort())} 入学者</th><td>${s.exam.enrolled}名</td></tr>` : ''}
     </table>
-    <span class="pen-pop-note">見込み＝中3生徒数×${escapeHtml(_regionLabel(s.region))}の来場率 ${(s.baseRate * 100).toFixed(1)}%</span>`;
+    <span class="pen-pop-note">平均並みの人数＝中3生徒数 ${s.g3}名 × ${escapeHtml(_regionLabel(s.region))}の平均来場率 ${(s.baseRate * 100).toFixed(1)}%</span>`;
+}
+
+// 表・吹き出し用の整数表示。平均並みの人数は四捨五入し、差は「来場 − 表示した平均並みの人数」にそろえる
+function _gapNumbers(s) {
+  const exp = Math.round(s.expected);
+  return { exp, diff: s.students - exp };
+}
+function _signed(n) {
+  return n > 0 ? `+${n}` : String(n);
 }
 
 function _renderAreaButtons() {
@@ -393,7 +401,7 @@ function _renderPenetrationSummary(p) {
   const el = document.getElementById('school-map-summary');
   if (!el) return;
   el.innerHTML = p.regions.map(r => `
-    <div class="pen-kpi"><span class="pen-kpi-label">${escapeHtml(_regionLabel(r.name))}の来場率</span><span class="pen-kpi-value">${(r.baseRate * 100).toFixed(1)}<small>%</small></span><span class="pen-kpi-sub">来場 ${r.sizedStudents}名 ÷ 中3生徒数 ${r.sizedG3.toLocaleString()}名</span></div>
+    <div class="pen-kpi"><span class="pen-kpi-label">${escapeHtml(_regionLabel(r.name))}の平均来場率</span><span class="pen-kpi-value">${(r.baseRate * 100).toFixed(1)}<small>%</small></span><span class="pen-kpi-sub">来場 ${r.sizedStudents}名 ÷ 中3生徒数 ${r.sizedG3.toLocaleString()}名</span></div>
     <div class="pen-kpi"><span class="pen-kpi-label">来場のあった学校</span><span class="pen-kpi-value">${r.visitedCount}<small>校 / ${r.count}校</small></span><span class="pen-kpi-sub">来場なし（生徒数登録校）${r.sizedNone}校 / ${r.sizedCount}校</span></div>`).join('');
 }
 
@@ -406,7 +414,7 @@ function _renderPenetrationLegend(p) {
   }).join('');
   el.innerHTML = `
     <div class="pen-legend-row">${items}</div>
-    <div class="pen-legend-note">丸の大きさ＝中3生徒数　／　丸の中の数字＝来場者（実人数、キャンセルは含まない）　／　色＝「中3生徒数×地域の来場率」で求めた見込みと比べた来場状況（山口県内と北九州市は距離が異なるため、来場率を分けて計算しています）</div>`;
+    <div class="pen-legend-note">丸の大きさ＝中3生徒数　／　丸の中の数字＝来場者（実人数、キャンセルは含まない）　／　色＝「中3生徒数×地域の平均来場率」で求めた平均並みの人数と比べた来場状況（山口県内と北九州市は距離が異なるため、平均来場率を分けて計算しています）</div>`;
 }
 
 function _renderGapLists(p) {
@@ -415,28 +423,43 @@ function _renderGapLists(p) {
   const hasExam = p.schools.some(s => s.exam != null);
   const row = s => {
     const lv = PENETRATION_LEVELS[s.level];
-    const gap = s.gap >= 0 ? `+${s.gap.toFixed(1)}` : s.gap.toFixed(1);
+    const { exp, diff } = _gapNumbers(s);
     return `<tr>
       <td class="gap-name"><i style="background:${lv.fill};border-color:${lv.stroke}"></i>${escapeHtml(s.name.replace(/^.+?[市町村]立/, ''))}<span class="gap-city">${escapeHtml(s.city)}</span></td>
-      <td>${s.g3}</td><td><b>${s.students}</b></td><td>${s.expected.toFixed(1)}</td>
-      <td class="${s.gap < 0 ? 'neg' : 'pos'}">${gap}</td>
+      <td>${s.g3}</td><td><b>${s.students}</b></td><td>${exp}</td>
+      <td class="${diff < 0 ? 'neg' : 'pos'}">${_signed(diff)}</td>
       ${hasExam ? `<td>${s.exam.total}${p.examHasPasses ? `<span class="gap-sub">／${s.exam.enrolled}</span>` : ''}</td>` : ''}</tr>`;
   };
   const table = (list, empty) => list.length ? `
     <div class="gap-table-wrap"><table class="gap-table">
-      <thead><tr><th>学校</th><th>中3生徒数</th><th>来場</th><th>見込み</th><th>差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数${p.examHasPasses ? '／入学者数' : ''}">${p.examHasPasses ? '昨年度 受験／入学' : '昨年度受験'}</th>` : ''}</tr></thead>
+      <thead><tr><th>学校</th><th>中3生徒数</th><th>来場</th><th>平均並みの人数</th><th>平均との差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数${p.examHasPasses ? '／入学者数' : ''}">${p.examHasPasses ? '昨年度 受験／入学' : '昨年度受験'}</th>` : ''}</tr></thead>
       <tbody>${list.slice(0, 10).map(row).join('')}</tbody>
     </table></div>` : `<p class="gap-empty">${empty}</p>`;
 
-  el.innerHTML = `
-    <div class="gap-col">
-      <h3 class="gap-title">来場が見込みを下回る学校</h3>
-      <p class="gap-desc">中3生徒数に対して来場が少ない順（上位10校）。訪問・案内強化の候補です。</p>
-      ${table(p.shortfall, '該当する学校はありません')}
-    </div>
-    <div class="gap-col">
-      <h3 class="gap-title">来場が見込みを上回る学校</h3>
-      <p class="gap-desc">中3生徒数に対して来場が多い順（上位10校）。関係が築けている学校です。</p>
-      ${table(p.surplus, '該当する学校はありません')}
+  // 山口県内と北九州市は平均来場率が大きく違うため、表を分ける
+  el.innerHTML = p.regions.filter(r => r.sizedCount).map(r => {
+    const inRegion = s => s.region === r.name;
+    const rate = (r.baseRate * 100).toFixed(1);
+    return `
+    <div class="gap-region">
+      <h3 class="gap-region-title">${escapeHtml(_regionLabel(r.name))}</h3>
+      <p class="gap-region-note">
+        <b>平均並みの人数</b>＝中3生徒数 × ${escapeHtml(_regionLabel(r.name))}の平均来場率 <b>${rate}%</b>（来場 ${r.sizedStudents}名 ÷ 中3生徒数 ${r.sizedG3.toLocaleString()}名）。
+        平均的な割合で来場していれば、何人来ている計算になるかを示します。<b>平均との差</b>＝来場 − 平均並みの人数。
+        ${r.baseRate < 0.02 ? `<br>※平均来場率が低いため、平均並みの人数は多くの学校で0〜1名です。1〜2名の来場でも「上回る」に入ります。` : ''}
+      </p>
+      <div class="gap-lists">
+        <div class="gap-col">
+          <h4 class="gap-title">来場が平均を下回る学校</h4>
+          <p class="gap-desc">平均との差が大きい順（上位10校）。訪問・案内強化の候補です。</p>
+          ${table(p.shortfall.filter(inRegion), '該当する学校はありません')}
+        </div>
+        <div class="gap-col">
+          <h4 class="gap-title">来場が平均を上回る学校</h4>
+          <p class="gap-desc">平均との差が大きい順（上位10校）。関係が築けている学校です。</p>
+          ${table(p.surplus.filter(inRegion), '該当する学校はありません')}
+        </div>
+      </div>
     </div>`;
+  }).join('');
 }

@@ -14,24 +14,42 @@ async function hashPassword(password) {
   }
 }
 
+// 戻り値: 'admin'（管理者）/ 'staff'（閲覧のみ）/ null（不一致）
 async function checkPassword(input) {
   const config = getConfig();
   const storedHash = config.password_hash;
   // Legacy NOCRYPTO entries — still verify, but can't re-hash
   if (storedHash.startsWith('NOCRYPTO:')) {
-    return storedHash === 'NOCRYPTO:' + input;
+    return storedHash === 'NOCRYPTO:' + input ? 'admin' : null;
   }
   const inputHash = await hashPassword(input);
-  if (inputHash === null) return false; // crypto unavailable → deny
-  return inputHash === storedHash;
+  if (inputHash === null) return null; // crypto unavailable → deny
+  if (inputHash === storedHash) return 'admin';
+  if (inputHash === STAFF_PASSWORD_HASH) return 'staff';
+  return null;
+}
+
+// ===== 権限（管理者／閲覧のみ）=====
+function _setRole(role) {
+  window.USER_ROLE = role;
+  window.IS_ADMIN = role === 'admin';
+}
+
+// 編集操作の入口で呼ぶ。閲覧用パスワードで入った場合は操作させない
+function requireAdmin() {
+  if (window.IS_ADMIN) return true;
+  showToast('閲覧専用のため、この操作はできません。', 'error');
+  return false;
 }
 
 // ===== LOGIN OVERLAY AUTH (Phase 6-1: replaces prompt()) =====
 async function initAuth() {
   const overlay = document.getElementById('login-overlay');
 
-  // Already authenticated in this session
-  if (sessionStorage.getItem('umeko_auth') === 'ok') {
+  // Already authenticated in this session（'ok' は権限分け以前の管理者ログイン）
+  const saved = sessionStorage.getItem('umeko_auth');
+  if (saved === 'admin' || saved === 'staff' || saved === 'ok') {
+    _setRole(saved === 'staff' ? 'staff' : 'admin');
     if (overlay) overlay.style.display = 'none';
     return true;
   }
@@ -71,10 +89,11 @@ function _awaitLogin() {
       if (btn) { btn.disabled = true; btn.textContent = '確認中…'; }
       _clearOverlayError();
 
-      const ok = await checkPassword(password);
+      const role = await checkPassword(password);
 
-      if (ok) {
-        sessionStorage.setItem('umeko_auth', 'ok');
+      if (role) {
+        _setRole(role);
+        sessionStorage.setItem('umeko_auth', role);
         if (overlay) overlay.style.display = 'none';
         resolve(true);
         return;
@@ -118,6 +137,7 @@ function _disableLoginForm() {
 
 // ===== PASSWORD CHANGE (Phase 5-2: block plaintext storage) =====
 async function changePassword(newPassword) {
+  if (!requireAdmin()) return false;
   // Phase 5-2: NOCRYPTO environments must not store plaintext
   if (!crypto || !crypto.subtle) {
     showToast('HTTPS環境でのみパスワードを変更できます。', 'error');
@@ -130,6 +150,10 @@ async function changePassword(newPassword) {
   const hash = await hashPassword(newPassword);
   if (!hash) {
     showToast('パスワードのハッシュ化に失敗しました。', 'error');
+    return false;
+  }
+  if (hash === STAFF_PASSWORD_HASH) {
+    showToast('閲覧用パスワードと同じものは設定できません。', 'error');
     return false;
   }
   const config = getConfig();

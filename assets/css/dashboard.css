@@ -580,6 +580,13 @@
   margin-top: var(--space-5, 20px);
 }
 .gap-col { min-width: 0; }
+#school-gap-lists { margin-top: var(--space-5, 20px); }
+.gap-region { margin-top: var(--space-6, 24px); padding-top: var(--space-4, 16px); border-top: 1px solid var(--color-gray-200); }
+.gap-region:first-child { border-top: none; padding-top: 0; }
+.gap-region-title { font-size: var(--text-lg); font-weight: 800; color: var(--color-gray-900); }
+.gap-region-note { font-size: var(--text-xs); color: var(--color-gray-600, #555); line-height: 1.7; margin: var(--space-1) 0 0;
+  background: var(--color-gray-100); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); }
+.gap-region .gap-lists { margin-top: var(--space-3, 12px); }
 .gap-table-wrap { overflow-x: auto; }
 .gap-title { font-size: var(--text-base); font-weight: 700; color: var(--color-gray-900); }
 .gap-desc { font-size: var(--text-xs); color: var(--color-gray-500); margin: 2px 0 var(--space-2); }
@@ -1001,3 +1008,14 @@
   .progress-card { box-shadow: none; border: 1px solid #ccc; }
   body { background: white; }
 }
+
+/* ===== 閲覧専用（閲覧用パスワードでログイン）===== */
+.staff-only { display: none; }
+body.view-only .staff-only { display: block; }
+body.view-only .admin-only { display: none !important; }
+.view-only-notice {
+  background: #EAF2FB; border: 1px solid #A9C4DC; color: #123B63;
+  border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm); margin-bottom: var(--space-4);
+}
+.comment-toggle-btn.is-readonly { cursor: default; }

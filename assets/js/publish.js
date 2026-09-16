@@ -9,6 +9,7 @@ function getGitHubConfig() {
 }
 
 function saveGitHubConfig() {
+  if (!requireAdmin()) return;
   const owner = (document.getElementById('gh-owner')?.value || '').trim();
   const repo  = (document.getElementById('gh-repo')?.value  || '').trim();
   const tokenEl = document.getElementById('gh-token');
@@ -92,6 +93,7 @@ async function syncFromGitHubIfNewer() {
 
 // ===== DOWNLOAD data.json =====
 function downloadPublishData() {
+  if (!requireAdmin()) return;
   const payload = buildExportData();
   if (!Object.keys(payload.slots).length) {
     showToast('エクスポートするデータがありません。先にCSVをアップロードしてください。', 'error');
@@ -120,6 +122,7 @@ function utf8ToBase64(str) {
 
 // ===== PUBLISH TO GITHUB =====
 async function publishToGitHub() {
+  if (!requireAdmin()) return;
   // 入力欄の現在値を優先し、なければ保存済み設定を使う
   const ownerInput = (document.getElementById('gh-owner')?.value || '').trim();
   const repoInput  = (document.getElementById('gh-repo')?.value  || '').trim();

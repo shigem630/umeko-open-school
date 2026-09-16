@@ -56,7 +56,7 @@ function renderAnnotationList(eventKey, containerId) {
         <span class="annotation-date">${formatAnnotationDate(a.date)}</span>
         <span class="annotation-badge type--${a.type}">${typeLabel}</span>
         <span class="annotation-text">${escapeHtml(a.text)}</span>
-        ${window.IS_TEACHER ? `<div class="annotation-actions">
+        ${window.IS_ADMIN ? `<div class="annotation-actions">
           <button class="btn btn-ghost btn-sm btn-icon anno-delete-btn" title="削除" data-ann-id="${a.id}">✕</button>
         </div>` : ''}
       </div>
@@ -66,7 +66,7 @@ function renderAnnotationList(eventKey, containerId) {
   // Bind delete handlers after DOM injection (no inline onclick)
   container.querySelectorAll('.anno-delete-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (!confirm('このメモを削除しますか？')) return;
+      if (!requireAdmin() || !confirm('このメモを削除しますか？')) return;
       const annId = btn.dataset.annId;
       deleteAnnotation(eventKey, annId);
       renderAnnotationList(eventKey, containerId);

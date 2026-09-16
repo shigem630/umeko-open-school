@@ -424,7 +424,7 @@ function buildBeforePanelHTML(key, rows = []) {
       <div class="chart-toolbar">
         <div class="chart-title">📈 日別申込推移</div>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-          ${window.IS_TEACHER ? `<button class="btn btn-secondary btn-sm" onclick="showAnnotationForm()">＋ メモを追加</button>` : ''}
+          ${window.IS_ADMIN ? `<button class="btn btn-secondary btn-sm" onclick="showAnnotationForm()">＋ メモを追加</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="downloadChartImage('trend-${key}','申込推移')">💾 画像保存</button>
         </div>
       </div>
@@ -590,7 +590,7 @@ function buildMusicDetailsHTML(m) {
 function buildAfterPanelHTML(key) {
   const commentsSection = `
     <div class="card" style="margin-top:var(--space-4)">
-      <div class="card-title">✏️ 感想・メッセージ${window.IS_TEACHER ? '<span class="comment-mod-hint">（🌐ボタンで生徒ページに公開／再度押すと非公開）</span>' : ''}</div>
+      <div class="card-title">✏️ 感想・メッセージ${window.IS_ADMIN ? '<span class="comment-mod-hint">（🌐ボタンで生徒ページに公開／再度押すと非公開）</span>' : ''}</div>
       <div id="free-comments-${key}" class="feedback-list">
         <p style="color:var(--color-gray-400);font-size:var(--text-sm)">データがありません</p>
       </div>
@@ -679,15 +679,17 @@ function renderCommentsSection(eventKey, rows) {
     const summary = `<div class="comment-mod-summary">${comments.length}件中 <strong>${approvedCount}件</strong> を生徒ページに公開中</div>`;
     commentsEl.innerHTML = summary + comments.map(c => {
       const on = isCommentApproved(eventKey, c.id);
+      // 閲覧専用では公開状態の表示のみ（切替不可）
+      const tag = window.IS_ADMIN ? 'button' : 'span';
       return `
         <div class="feedback-item comment-mod-item${on ? ' is-public' : ''}">
-          <button class="comment-toggle-btn${on ? ' on' : ''}" data-id="${escapeHtml(c.id)}">
+          <${tag} class="comment-toggle-btn${on ? ' on' : ''}${window.IS_ADMIN ? '' : ' is-readonly'}" data-id="${escapeHtml(c.id)}">
             ${on ? '🌐 公開中' : '🔒 非公開'}
-          </button>
+          </${tag}>
           <span class="comment-mod-text">${slotBadgeHTML(c.slot, isCombined)}${escapeHtml(c.text)}</span>
         </div>`;
     }).join('');
-    commentsEl.querySelectorAll('.comment-toggle-btn').forEach(btn => {
+    commentsEl.querySelectorAll('button.comment-toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         toggleCommentApproval(eventKey, btn.dataset.id);
         renderCommentsSection(eventKey, rows);
@@ -711,6 +713,7 @@ function isCommentApproved(eventKey, id) {
 }
 
 function toggleCommentApproval(eventKey, id) {
+  if (!requireAdmin()) return;
   const map = safeGet('approved_comments') || {};
   const list = map[eventKey] || [];
   const sid = String(id);
@@ -832,6 +835,7 @@ function setupUploadZone(zoneEl, slotId, eventKey, onUploaded) {
 }
 
 function handleFile(file, slotId, zoneEl, eventKey, onUploaded) {
+  if (!requireAdmin()) return;
   if (!file.name.toLowerCase().endsWith('.csv')) {
     showToast('CSVファイル（.csv）を選択してください。', 'error');
     return;
@@ -896,6 +900,7 @@ function renderSettingsPanel() {
 }
 
 function saveGoals() {
+  if (!requireAdmin()) return;
   const config = getConfig();
   EVENTS.forEach(event => {
     const input = document.getElementById(`goal-${event.key}`);

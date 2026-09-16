@@ -50,7 +50,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <span class="header-badge">🔒 教員専用</span>
+        <span class="header-badge" id="header-role-badge">🔒 教員専用</span>
         <a href="index.html" class="btn btn-secondary btn-sm">生徒用ページ</a>
         <button class="btn btn-secondary btn-sm" onclick="window.print()">印刷</button>
       </div>
@@ -58,6 +58,11 @@
   </header>
 
   <main class="dashboard-main" id="main-content" style="display:none">
+
+    <!-- 閲覧専用の案内（閲覧用パスワードで入った場合のみ表示）-->
+    <div class="view-only-notice staff-only">
+      👀 <strong>閲覧専用</strong>でログインしています。データの表示のみ可能で、CSVの読み込み・設定の変更・公開・データのリセットはできません。表示されるデータは、管理者が最後に公開した時点のものです。
+    </div>
 
     <!-- Security notice -->
     <div class="security-notice">
@@ -89,7 +94,7 @@
     </section>
 
     <!-- Section 2: CSV Upload -->
-    <section class="upload-panel card" style="margin-bottom:var(--space-6)">
+    <section class="upload-panel card admin-only" style="margin-bottom:var(--space-6)">
       <div class="section-header">
         <h2 class="section-title">📂 データ管理（CSVアップロード）</h2>
       </div>
@@ -281,7 +286,7 @@
         <div id="school-map" class="school-map" data-analysis="1"></div>
         <div id="school-map-caption" class="map-caption"></div>
         <div id="school-map-zero" class="zero-list"></div>
-        <div id="school-gap-lists" class="gap-lists"></div>
+        <div id="school-gap-lists"></div>
       </div>
     </section>
 
@@ -299,7 +304,7 @@
     </section>
 
     <!-- Section 4: Settings -->
-    <section class="settings-panel card">
+    <section class="settings-panel card admin-only">
       <div class="section-header">
         <h2 class="section-title">⚙️ 設定</h2>
       </div>
@@ -426,11 +431,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   const ok = await initAuth();
   if (!ok) return;
 
+  // 閲覧用パスワードの場合は、編集系の欄を非表示にする
+  document.body.classList.toggle('view-only', !window.IS_ADMIN);
+  if (!window.IS_ADMIN) document.getElementById('header-role-badge').textContent = '👀 閲覧専用';
   document.getElementById('main-content').style.display = 'block';
 
   // 複数PC対応: 開いたときにGitHubの最新公開データを取り込む（別PCの更新も反映）
   const synced = await syncFromGitHubIfNewer();
   if (synced) showToast('GitHubから最新の公開データを読み込みました。', 'success');
+
+  // 以降の読込・設定・公開の準備は管理者のみ
+  if (!window.IS_ADMIN) {
+    renderProgressCards();
+    initEventTabs();
+    renderSchoolTotals('jhs');
+    renderSchoolMap('jhs');
+    renderExamSection();
+    return;
+  }
 
   // Setup upload zones
   EVENTS.forEach(event => {
@@ -473,6 +491,7 @@ function updateGoalBadges() {
 function handleCardClick(key) {
   const rows = getEventRows(key);
   if (rows.length === 0) {
+    if (!window.IS_ADMIN) return;
     const uploadPanel = document.querySelector('.upload-panel');
     if (uploadPanel) {
       uploadPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -493,6 +512,7 @@ function handleChangePassword() {
 }
 
 function handleClearData() {
+  if (!requireAdmin()) return;
   if (!confirm('すべてのCSVデータとメモをリセットします。\nこの操作は元に戻せません。よろしいですか？')) return;
   clearAllData();
   showToast('データをリセットしました。', 'success');
@@ -507,6 +527,7 @@ function handleClearData() {
 
 // Annotation form (teacher only — Phase 5-3)
 function showAnnotationForm() {
+  if (!window.IS_ADMIN) return;
   const form = document.getElementById('annotation-form');
   if (form) { form.classList.add('open'); document.getElementById('anno-date').value = new Date().toISOString().slice(0,10); }
 }
@@ -515,6 +536,7 @@ function hideAnnotationForm() {
   if (form) form.classList.remove('open');
 }
 function submitAnnotation() {
+  if (!requireAdmin()) return;
   const date = document.getElementById('anno-date').value;
   const text = document.getElementById('anno-text').value.trim();
   const type = document.getElementById('anno-type').value;
