@@ -84,6 +84,20 @@
 
     </section>
 
+    <!-- Section 3: 学校別 累計来場者（全イベント合算） -->
+    <section class="school-totals-section">
+      <div class="section-header st-header">
+        <h2 class="section-title" id="school-totals-title">🏫 中学校別 累計来場者数</h2>
+        <div class="st-toggle">
+          <button class="st-toggle-btn active" data-type="jhs" onclick="renderSchoolTotals('jhs')">中学校</button>
+          <button class="st-toggle-btn" data-type="elm" onclick="renderSchoolTotals('elm')">小学校</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="school-totals-body"></div>
+      </div>
+    </section>
+
   </main>
 
   <!-- Phase 9-4: subtle admin link in footer -->
@@ -124,6 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderProgressCards('student');
   initEventTabs();
+  renderSchoolTotals('jhs');
 
   const hasAnyData = EVENTS.some(e => getEventRows(e.key).length > 0);
   if (!hasAnyData) {

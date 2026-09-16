@@ -47,6 +47,30 @@ function getTopSchools(rows, n = 10) {
     .map(([name, count]) => ({ name, count }));
 }
 
+// 全イベント合算の学校別来場者数（type: 'jhs'=中学校 / 'elm'=小学校）
+// students=実人数（同一生徒plusseed_idは1名）／ visits=延べ来場数
+function getSchoolTotals(type) {
+  const uniq = {};    // school -> Set(生徒キー)
+  const visits = {};  // school -> 延べ来場数
+  for (const event of EVENTS) {
+    for (const slot of event.csvSlots) {
+      if (slot.type !== type) continue;
+      const data = getEventData(slot.id);
+      if (!data || !data.rows) continue;
+      for (const r of data.rows) {
+        const school = (r.school || '').trim();
+        if (!school) continue;
+        visits[school] = (visits[school] || 0) + 1;
+        if (!uniq[school]) uniq[school] = new Set();
+        uniq[school].add(r.plusseed_id ? 'p:' + r.plusseed_id : 'r:' + (r.blend_id || r.app_no || Math.random()));
+      }
+    }
+  }
+  return Object.keys(uniq)
+    .map(name => ({ name, students: uniq[name].size, visits: visits[name] }))
+    .sort((a, b) => b.students - a.students || b.visits - a.visits);
+}
+
 // Returns top prefectures
 function getTopPrefectures(rows, n = 10) {
   const counts = countByField(rows, 'prefecture');

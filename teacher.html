@@ -213,6 +213,20 @@
       <div class="phase-panel" data-phase="after" style="display:none"></div>
     </section>
 
+    <!-- Section 3.5: 学校別 累計来場者（営業用）-->
+    <section class="school-totals-section">
+      <div class="section-header st-header">
+        <h2 class="section-title" id="school-totals-title">🏫 中学校別 累計来場者数</h2>
+        <div class="st-toggle">
+          <button class="st-toggle-btn active" data-type="jhs" onclick="renderSchoolTotals('jhs')">中学校</button>
+          <button class="st-toggle-btn" data-type="elm" onclick="renderSchoolTotals('elm')">小学校</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="school-totals-body"></div>
+      </div>
+    </section>
+
     <!-- Section 4: Settings -->
     <section class="settings-panel card">
       <div class="section-header">
@@ -362,6 +376,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderSettingsPanel();
   updateGoalBadges();
   initEventTabs();
+  renderSchoolTotals('jhs');
   initPublishUI();
 });
 

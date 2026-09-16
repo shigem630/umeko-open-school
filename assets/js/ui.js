@@ -702,6 +702,46 @@ function renderSchoolTable(tbodyId, rows) {
   }).join('');
 }
 
+// ===== 学校別 累計来場者（全イベント合算・営業用）=====
+let _schoolTotalsType = 'jhs';
+function renderSchoolTotals(type) {
+  if (type) _schoolTotalsType = type;
+  const body = document.getElementById('school-totals-body');
+  if (!body) return;
+
+  document.querySelectorAll('.st-toggle-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === _schoolTotalsType));
+
+  const label = _schoolTotalsType === 'jhs' ? '中学校' : '小学校';
+  const titleEl = document.getElementById('school-totals-title');
+  if (titleEl) titleEl.textContent = `🏫 ${label}別 累計来場者数`;
+
+  const totals = getSchoolTotals(_schoolTotalsType);
+  if (!totals.length) {
+    body.innerHTML = '<p style="color:var(--color-gray-400);font-size:var(--text-sm);text-align:center;padding:var(--space-6)">まだデータがありません</p>';
+    return;
+  }
+
+  const totalStudents = totals.reduce((s, t) => s + t.students, 0);
+  const max = totals[0].students;
+  body.innerHTML = `
+    <div class="st-summary">${label} <strong>${totals.length}</strong>校から、実人数 <strong>${totalStudents}</strong>名が来場（同じ生徒の複数回参加は1名で集計）</div>
+    <div class="st-list">
+      ${totals.map((t, i) => {
+        const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+        const barPct = Math.round(t.students * 100 / max);
+        const repeat = t.visits - t.students;
+        return `
+          <div class="st-row">
+            <span class="school-rank ${rankClass}">${i + 1}</span>
+            <span class="st-name">${escapeHtml(t.name)}</span>
+            <div class="st-bar"><div class="st-bar-fill" style="width:${barPct}%"></div></div>
+            <span class="st-count">${t.students}<span class="st-unit">名</span>${repeat > 0 ? `<span class="st-repeat">延べ${t.visits}</span>` : ''}</span>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
 // ===== CSV UPLOAD UI =====
 function setupUploadZone(zoneEl, slotId, eventKey, onUploaded) {
   const input = zoneEl.querySelector('input[type="file"]');

@@ -199,6 +199,99 @@
   border-radius: var(--radius-full);
 }
 
+/* ===== 学校別 累計来場者セクション（営業用）===== */
+.school-totals-section { margin-bottom: var(--space-6); }
+.st-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.st-toggle {
+  display: inline-flex;
+  background: var(--color-gray-100);
+  border-radius: var(--radius-full);
+  padding: 3px;
+}
+.st-toggle-btn {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  transition: all 0.15s;
+}
+.st-toggle-btn.active {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.st-summary {
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+  background: var(--color-primary-soft);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+.st-summary strong { color: var(--color-primary); font-size: var(--text-base); }
+
+.st-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 560px;
+  overflow-y: auto;
+}
+.st-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 90px auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+.st-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-gray-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-bar {
+  height: 8px;
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.st-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+}
+.st-count {
+  font-weight: 800;
+  color: var(--color-primary);
+  font-size: var(--text-base);
+  white-space: nowrap;
+  text-align: right;
+}
+.st-unit { font-size: var(--text-xs); font-weight: 600; margin-left: 1px; }
+.st-repeat {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-gray-400);
+  margin-left: var(--space-2);
+}
+
+@media (max-width: 640px) {
+  .st-row { grid-template-columns: 24px 1fr 56px auto; gap: var(--space-2); }
+}
+
 /* ===== POST-EVENT SECTION ===== */
 .post-event-intro {
   padding: var(--space-4);
