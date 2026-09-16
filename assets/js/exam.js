@@ -164,6 +164,15 @@ async function importExamFiles(fileList) {
   }
 }
 
+// 入試区分の表示順：自己推薦型 → 学校推薦型 → 一般 → 二次募集（その他は最後）。同じ区分内は 普通科 → 音楽科
+const EXAM_TYPE_ORDER = ['自己推薦', '学校推薦', '一般', '二次'];
+const EXAM_DEPT_ORDER = ['普通科', '音楽科'];
+function _examOrder(label) {
+  const t = EXAM_TYPE_ORDER.findIndex(k => label.includes(k));
+  const d = EXAM_DEPT_ORDER.findIndex(k => label.includes(k));
+  return (t < 0 ? EXAM_TYPE_ORDER.length : t) * 10 + (d < 0 ? EXAM_DEPT_ORDER.length : d);
+}
+
 // 保存データから集計を作る
 function getExamSummary() {
   const rec = _getExamRecords();
@@ -249,7 +258,7 @@ function getExamSummary() {
     enrolledOs, enrolledLinked,
     notPassed: apps.filter(a => !passedNos.has(a.no)).length,
     missingApplicantLabels,
-    byExam: Object.values(byExam),
+    byExam: Object.values(byExam).sort((x, y) => _examOrder(x.label) - _examOrder(y.label) || x.label.localeCompare(y.label, 'ja')),
     schools: Object.values(schools).sort((a, b) =>
       b.enrolled - a.enrolled || b.total - a.total || a.short.localeCompare(b.short, 'ja')),
   };
