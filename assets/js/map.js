@@ -344,7 +344,7 @@ function _addCountLabel(pos, n, onDark) {
 }
 
 function _examFiscalShort() {
-  const ex = typeof getExamSummary === 'function' ? getExamSummary() : null;
+  const ex = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool() : null;
   return ex && ex.fiscal ? ex.fiscal.replace('入試', '') : '入試';
 }
 

@@ -217,10 +217,20 @@
       <!-- 入試データ（教員のみ・公開しない） -->
       <div class="upload-event-group exam-upload-group">
         <div class="upload-event-header">
-          <span class="upload-event-date">入試データ（受験者一覧）</span>
+          <span class="upload-event-date">入試データ（受験者一覧・合格者一覧・過去のオープンスクール）</span>
           <span class="exam-private-badge">🔒 生徒用ページには表示されません</span>
         </div>
-        <p class="exam-upload-desc">BLENDの「〇〇選抜_受験者一覧.csv」（入試区分ごと・すべて）と「合格者一覧.csv」を選択（またはドラッグ）してください。まとめて入れても、あとから合格者一覧だけを追加しても構いません。<br>このパソコンに保存するのは <strong>受験番号・中学校・入試区分・専願/併願・OS参加の有無・合格/入学</strong> のみで、氏名・住所・連絡先は保存しません。<br>「🚀 GitHubに公開」を押すと、このデータを<strong>閲覧用パスワードで暗号化</strong>して共有し、教職員が閲覧用パスワードでログインしたときだけ表示されます（初回は閲覧用パスワードの入力を求めます）。暗号化していない状態では公開されません。</p>
+        <p class="exam-upload-desc">BLENDの次のCSVを、まとめて選択（またはドラッグ）してください。高校入試・中学入試、ファイルの種類は自動で判定します。あとから一部だけ追加しても構いません。</p>
+        <ul class="exam-upload-list">
+          <li>「〇〇選抜_受験者一覧.csv」（入試区分ごと・すべて）</li>
+          <li>「合格者一覧.csv」（高校入試・中学入試それぞれ）</li>
+          <li>前年度のオープンスクール・説明会・体験会の「〇〇_申込一覧.csv」（来場から受験までの照合に使います）</li>
+        </ul>
+        <div class="exam-year-select">
+          <label for="exam-os-year">申込一覧（過去のオープンスクール）の実施年度</label>
+          <select id="exam-os-year" class="form-input"></select>
+        </div>
+        <p class="exam-upload-desc">このパソコンに保存するのは <strong>受験番号・プラスシードID・学校名・入試区分・コース・専願/併願・OS参加の有無・合格/入学、申込一覧の学年・来場の有無</strong> のみで、氏名・住所・連絡先は保存しません。<br>「🚀 GitHubに公開」を押すと、このデータを<strong>閲覧用パスワードで暗号化</strong>して共有し、教職員が閲覧用パスワードでログインしたときだけ表示されます（初回は閲覧用パスワードの入力を求めます）。暗号化していない状態では公開されません。</p>
         <label class="upload-zone exam-upload-zone" id="exam-upload-zone">
           <input type="file" accept=".csv" multiple>
           <div class="upload-zone-icon">📋</div>
@@ -294,7 +304,7 @@
     <section class="school-map-section">
       <div class="section-header st-header">
         <div>
-          <h2 class="section-title">📋 入試の受験者数（学校別）</h2>
+          <h2 class="section-title">📋 入試結果の分析</h2>
           <p class="section-subtitle" id="exam-section-subtitle"></p>
         </div>
       </div>
