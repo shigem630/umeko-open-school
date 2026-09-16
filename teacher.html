@@ -381,9 +381,20 @@ function renderYearSwitch() {
   el.innerHTML = `
     <span class="year-switch-label">表示年度</span>
     ${years.map(y => `<button class="year-btn${y === ACTIVE_YEAR ? ' active' : ''}" onclick="switchYear(${y})">${y}年度${y === CURRENT_YEAR ? '（今年度）' : ''}</button>`).join('')}
-    ${past ? `<span class="year-switch-note">過去の年度を表示しています（申込状況・回ごとのグラフ・学校別・地図）。目標人数とペースは表示しません。${est ? '開催日はBLENDの申込締切から推定しています。' : ''}</span>` : ''}`;
+    ${past ? `<span class="year-switch-note">過去の年度を表示しています（申込状況・回ごとのグラフ・学校別・地図）。目標人数とペースは表示しません。${est ? '開催日はBLENDの申込締切から推定しています。' : ''}${_sharedExamStatus === 'nokey' || _sharedExamStatus === 'fail' ? '<br>この端末でデータが表示されない場合は、下の「入試結果の分析」欄で閲覧用パスワードを入力してください。' : ''}</span>` : ''}`;
   const title = document.getElementById('summary-title');
   if (title) title.textContent = `申込状況サマリー（${ACTIVE_YEAR}年度）`;
+}
+
+// 共有データを復号したあとなどに、画面全体を描き直す
+function refreshAllViews() {
+  renderYearSwitch();
+  if (window.IS_ADMIN) renderUploadPanel(onSlotUploaded);
+  renderProgressCards();
+  initEventTabs();
+  renderSchoolTotals();
+  renderSchoolMap();
+  renderExamSection();
 }
 
 function switchYear(year) {

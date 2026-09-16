@@ -123,6 +123,28 @@ async function loadSharedExamRecords() {
   }
 }
 
+// 入試欄の入力欄から：閲覧用パスワードで共有データを復号して表示する
+async function unlockSharedExamData(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('exam-unlock-password');
+  const pw = input ? input.value : '';
+  if (!pw) { showToast('閲覧用パスワードを入力してください。', 'error'); return; }
+  if (await hashPassword(pw) !== STAFF_PASSWORD_HASH) {
+    showToast('閲覧用パスワードが違います。', 'error');
+    if (input) { input.value = ''; input.focus(); }
+    return;
+  }
+  const key = await deriveExamShareKey(pw);
+  sessionStorage.setItem('umeko_exam_key', key);
+  // 管理者の端末では鍵を保存し、次回から入力不要にする（閲覧用パスワード自体は保存しない）
+  if (window.IS_ADMIN) safeSet(EXAM_SHARE_KEY_KEY, { hash: STAFF_PASSWORD_HASH, key });
+  const status = await loadSharedExamRecords();
+  if (status !== 'ok') { showToast('入試データを表示できませんでした。管理者が最新の閲覧用パスワードで公開し直す必要があります。', 'error'); return; }
+  showToast('入試データを表示しました。', 'success');
+  if (typeof refreshAllViews === 'function') refreshAllViews();
+  else renderExamSection();
+}
+
 function clearExamSummary() {
   if (!requireAdmin()) return;
   if (!confirm('読み込んだ入試データ（受験者一覧・合格者一覧・過去のオープンスクール）をすべて削除します。よろしいですか？')) return;
@@ -634,8 +656,9 @@ function getExamCountsBySchool(side = 'high', fiscals) {
 const _examView = { side: 'high', fiscal: null, sort: 'enrolled' };
 
 // ページの表示年度を切り替えたとき、入試欄をその年度に来場した学年の募集年度（翌年度）に合わせる
+// 今年度の表示では、入試結果のある最新の募集年度を初期表示にする（今年度の学年はまだ入試前のため）
 function syncExamViewToYear(year) {
-  _examView.fiscal = year + 1;
+  _examView.fiscal = year === CURRENT_YEAR ? null : year + 1;
 }
 
 function refreshExamViews() {
@@ -703,13 +726,22 @@ function renderExamSection() {
 
   if (!cohorts.some(c => getExamSummary(c.side, c.fiscal) && getExamSummary(c.side, c.fiscal).hasExam)) {
     if (sub) sub.textContent = '教員ページのみに表示され、生徒用ページには表示されません';
-    const staffMsg = {
-      nokey: '入試データを表示するには、いったんこのタブを閉じ、閲覧用パスワードでもう一度ログインしてください。',
-      fail:  '入試データを表示できませんでした。閲覧用パスワードが変更された可能性があります。管理者にお問い合わせください。',
-    }[_sharedExamStatus] || '入試データはまだ共有されていません。管理者が公開すると表示されます。';
+    // 共有（暗号化）データはあるが、この端末に鍵がない → 閲覧用パスワードの入力欄を出す（スマホなど別の端末で管理者として入った場合など）
+    if (_sharedExamStatus === 'nokey' || _sharedExamStatus === 'fail') {
+      body.innerHTML = `
+        <div class="exam-unlock">
+          <p class="exam-unlock-title">🔒 この端末で入試データを表示するには、閲覧用パスワードを入力してください</p>
+          <p class="gap-desc">入試データと過去の年度のデータは、閲覧用パスワードで暗号化して共有しています。${_sharedExamStatus === 'fail' ? '閲覧用パスワードが変更された可能性があります。新しい閲覧用パスワードを入力してください。' : ''}${window.IS_ADMIN ? 'この端末では次回から入力不要になります。' : ''}</p>
+          <form class="exam-unlock-form" onsubmit="unlockSharedExamData(event)">
+            <input type="password" id="exam-unlock-password" class="form-input" placeholder="閲覧用パスワード" autocomplete="off">
+            <button type="submit" class="btn btn-primary btn-sm">表示する</button>
+          </form>
+        </div>`;
+      return;
+    }
     body.innerHTML = `<p class="gap-empty" style="text-align:center">${window.IS_ADMIN
       ? '「データ管理」の「入試データ」欄から、BLENDの受験者一覧・合格者一覧（と過去のオープンスクールの申込一覧）を読み込むと表示されます。'
-      : staffMsg}</p>`;
+      : '入試データはまだ共有されていません。管理者が公開すると表示されます。'}</p>`;
     return;
   }
 
