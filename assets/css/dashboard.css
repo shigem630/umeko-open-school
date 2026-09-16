@@ -289,6 +289,8 @@
   color: var(--color-gray-400);
   margin-left: var(--space-2);
 }
+.st-cancel { color: #B85C1E; }
+.st-cancel-note { font-size: var(--text-xs); color: var(--color-gray-500); }
 
 @media (max-width: 640px) {
   .st-row { grid-template-columns: 24px 1fr 56px auto; gap: var(--space-2); }
@@ -324,7 +326,32 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.35);
   box-sizing: border-box;
 }
+.school-marker-inner.zero {
+  background: #fff;
+  color: #C62828;
+  border: 2px solid #C62828;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
 .leaflet-popup-content { font-size: var(--text-sm); line-height: 1.5; }
+/* まだ来場のない学校の一覧 */
+.zero-list { margin-top: var(--space-4); border-top: 1px solid var(--color-gray-200); padding-top: var(--space-4); }
+.zero-title { font-size: var(--text-base); font-weight: 700; margin: 0 0 var(--space-3); }
+.zero-area + .zero-area { margin-top: var(--space-4); }
+.zero-area-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); font-size: var(--text-sm); margin-bottom: var(--space-2); }
+.zero-area-head span { color: var(--color-gray-700); }
+.zero-num { color: #C62828; }
+.zero-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.zero-chip {
+  font-size: var(--text-xs);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid #C62828;
+  color: #9B1C1C;
+  background: #fff;
+}
+.zero-chip small { margin-left: 6px; font-size: 10px; color: var(--color-gray-500); }
+.zero-none { font-size: var(--text-sm); color: var(--color-gray-500); }
 @media (max-width: 640px) {
   .school-map { height: 380px; }
 }
@@ -441,7 +468,7 @@
 }
 .pen-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }

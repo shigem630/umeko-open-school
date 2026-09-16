@@ -785,8 +785,13 @@ function renderSchoolTotals(type) {
 
   const totalStudents = totals.reduce((s, t) => s + t.students, 0);
   const max = totals[0].students;
+  const cancels = getSchoolCancels(_schoolTotalsType);
+  const cancelTotal = Object.values(cancels).reduce((a, c) => a + c, 0);
+  const visitedNames = new Set(totals.map(t => t.name));
+  const cancelOnly = Object.keys(cancels).filter(n => !visitedNames.has(n));
   body.innerHTML = `
-    <div class="st-summary">${label} <strong>${totals.length}</strong>校から、実人数 <strong>${totalStudents}</strong>名が来場（同じ生徒の複数回参加は1名で集計）</div>
+    <div class="st-summary">${label} <strong>${totals.length}</strong>校から、実人数 <strong>${totalStudents}</strong>名が来場（同じ生徒の複数回参加は1名で集計）${cancelTotal ? `
+      <br><span class="st-cancel-note">申込後に来場しなかった方（キャンセル）${cancelTotal}名は来場者数に含めていません${cancelOnly.length ? `。キャンセルのみで来場0の学校：${cancelOnly.map(n => `${escapeHtml(n)}（${cancels[n]}名）`).join('、')}` : ''}</span>` : ''}</div>
     <div class="st-list">
       ${totals.map((t, i) => {
         const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
@@ -797,7 +802,7 @@ function renderSchoolTotals(type) {
             <span class="school-rank ${rankClass}">${i + 1}</span>
             <span class="st-name">${escapeHtml(t.name)}</span>
             <div class="st-bar"><div class="st-bar-fill" style="width:${barPct}%"></div></div>
-            <span class="st-count">${t.students}<span class="st-unit">名</span>${repeat > 0 ? `<span class="st-repeat">延べ${t.visits}</span>` : ''}</span>
+            <span class="st-count">${t.students}<span class="st-unit">名</span>${repeat > 0 ? `<span class="st-repeat">延べ${t.visits}</span>` : ''}${t.cancels ? `<span class="st-repeat st-cancel">キャンセル${t.cancels}</span>` : ''}</span>
           </div>`;
       }).join('')}
     </div>`;

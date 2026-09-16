@@ -1,7 +1,8 @@
 // ===== 学校マップ（Leaflet + 国土地理院 淡色地図）=====
 // 教員ページの中学校 = 浸透度マップ（営業リストの全校を表示。丸の大きさ=中3生徒数、色=見込みに対する来場状況）
-// それ以外（生徒ページ・小学校）= 来場のあった学校のみ、来場者数を数字＋色の濃さで表示
-// 座標は schools-master.js (SCHOOLS_MASTER_JHS) / schools-geo.js (SCHOOLS_GEO)、来場者数は getSchoolTotals() を使用。
+// それ以外（生徒ページ・小学校）= 来場者数マップ。下関市・門司区の全校（schools-area.js）は来場0も「0」で表示し、
+// それ以外の地域は来場のあった学校のみ表示する
+// 座標は schools-master.js / schools-area.js / schools-geo.js、来場者数は getSchoolTotals() を使用。
 
 let _schoolMap = null;
 let _schoolMapLayer = null;
@@ -27,18 +28,32 @@ function _inRegion([lat, lng]) {
   return lat >= 33.0 && lat <= 34.6 && lng >= 130.2 && lng <= 132.3;
 }
 
-// 表示範囲の切替（浸透度マップ）。bounds: [[南, 西], [北, 東]]
+// 表示範囲の切替。bounds: [[南, 西], [北, 東]]（null=表示中の学校すべてが入る範囲）
 const MAP_AREAS = [
   { key: 'west',   label: '下関・山陽小野田', bounds: [[33.92, 130.86], [34.32, 131.22]] },
   { key: 'city',   label: '下関市中心部',     bounds: [[33.925, 130.88], [34.045, 131.02]] },
-  { key: 'all',    label: '県内全域',         bounds: [[33.90, 130.80], [34.42, 132.20]] },
+  { key: 'kk',     label: '門司区・小倉',     bounds: [[33.77, 130.83], [33.97, 131.02]] },
+  { key: 'all',    label: '全域',             bounds: [[33.77, 130.80], [34.42, 132.20]] },
+];
+// 来場者数マップ（生徒ページ・小学校）
+const VISIT_MAP_AREAS = [
+  { key: 'focus',  label: '下関市・門司区',       bounds: [[33.855, 130.78], [34.31, 131.09]] },
+  { key: 'center', label: '下関市中心部・門司区', bounds: [[33.86, 130.87], [34.075, 131.05]] },
+  { key: 'visit',  label: '来場のあった全地域',   bounds: null },
 ];
 let _mapArea = 'west';
+let _visitArea = 'focus';
+let _mapAreas = MAP_AREAS;
+let _mapFitBounds = [];  // 'visit' 用：表示中の全マーカーの座標
 
 function setMapArea(key) {
-  _mapArea = key;
-  const area = MAP_AREAS.find(a => a.key === key);
-  if (_schoolMap && area) _schoolMap.fitBounds(area.bounds, { padding: [8, 8] });
+  const area = _mapAreas.find(a => a.key === key);
+  if (!area) return;
+  if (_mapAreas === MAP_AREAS) _mapArea = key; else _visitArea = key;
+  if (_schoolMap) {
+    if (area.bounds) _schoolMap.fitBounds(area.bounds, { padding: [8, 8] });
+    else if (_mapFitBounds.length) _schoolMap.fitBounds(_mapFitBounds, { padding: [30, 30], maxZoom: 12 });
+  }
   document.querySelectorAll('.pen-area-btn').forEach(b => b.classList.toggle('active', b.dataset.area === key));
 }
 
@@ -67,7 +82,7 @@ function renderSchoolMap(type) {
   }
 
   if (!_schoolMap) {
-    _schoolMap = L.map(el, { scrollWheelZoom: false, minZoom: 8, maxZoom: 15 }).setView([34.05, 131.05], 10);
+    _schoolMap = L.map(el, { scrollWheelZoom: false, minZoom: 8, maxZoom: 15, zoomSnap: 0.25 }).setView([34.05, 131.05], 10);
     // 道路や建物が控えめな淡色地図（丸マーカーを見やすくするため。無料・APIキー不要）
     L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
       maxZoom: 15,
@@ -84,45 +99,117 @@ function renderSchoolMap(type) {
   setTimeout(() => { if (_schoolMap) _schoolMap.invalidateSize(); }, 200);
 }
 
-// ---- 来場のあった学校のみ（生徒ページ・小学校）----
+// ---- 来場者数マップ（生徒ページ・小学校）----
+// 学校名の照合用キー（空白・ヶ/ケ の表記ゆれ、既知の別名を吸収）
+function _schoolKey(name) {
+  const n = typeof _normSchoolName === 'function' ? _normSchoolName(name) : String(name || '').replace(/[\s　]/g, '');
+  return n.replace(/ヶ/g, 'ケ');
+}
+
+function _visitMarker(pos, n, ratio, name, popupHtml, zero) {
+  const size = zero ? 24 : 26 + Math.round(ratio * 24); // 来場あり 26〜50px
+  const html = zero
+    ? `<div class="school-marker-inner zero" style="width:${size}px;height:${size}px">0</div>`
+    : `<div class="school-marker-inner" style="width:${size}px;height:${size}px;background:${_mapMarkerColor(_schoolMapType, ratio)}">${n}</div>`;
+  L.marker(pos, {
+    icon: L.divIcon({ className: 'school-marker', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+    zIndexOffset: zero ? 0 : 1000 + n,  // 来場ありの学校を上に重ねる
+  })
+    .bindTooltip(escapeHtml(_shortSchoolName(name)), { direction: 'top', offset: [0, -size / 2] })
+    .bindPopup(popupHtml)
+    .addTo(_schoolMapLayer);
+  _mapFitBounds.push(pos);
+}
+
+function _shortSchoolName(name) {
+  return String(name).replace(/^.+?[都道府県市区町村]立/, '');
+}
+
 function _renderVisitedMap(label) {
   _setAnalysisPanels(false);
   const totals = getSchoolTotals(_schoolMapType);
   const max = totals.length ? totals[0].students : 1;
-  const bounds = [];
-  let placed = 0, missing = [];
+  const byKey = {};
+  totals.forEach(t => { byKey[_schoolKey(t.name)] = t; });
+  const cancelByKey = {};
+  Object.entries(getSchoolCancels(_schoolMapType)).forEach(([n, c]) => {
+    cancelByKey[_schoolKey(n)] = (cancelByKey[_schoolKey(n)] || 0) + c;
+  });
+  const used = new Set();
+  _mapFitBounds = [];
 
-  totals.forEach(t => {
-    const geo = SCHOOLS_GEO[t.name];
-    if (!geo || !_inRegion(geo)) { missing.push(t.name); return; }
-    const ratio = max > 0 ? t.students / max : 0;
-    const size = 26 + Math.round(ratio * 24); // 26〜50px
-    const color = _mapMarkerColor(_schoolMapType, ratio);
-    const icon = L.divIcon({
-      className: 'school-marker',
-      html: `<div class="school-marker-inner" style="width:${size}px;height:${size}px;background:${color}">${t.students}</div>`,
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2]
-    });
-    const repeat = t.visits - t.students;
-    L.marker(geo, { icon })
-      .bindPopup(`<strong>${escapeHtml(t.name)}</strong><br>来場 実人数 <b>${t.students}名</b>${repeat > 0 ? `（延べ${t.visits}）` : ''}`)
-      .addTo(_schoolMapLayer);
-    bounds.push(geo);
-    placed++;
+  const popup = (name, t, areaLabel) => {
+    const c = cancelByKey[_schoolKey(name)] || 0;
+    return `<strong>${escapeHtml(name)}</strong><br>`
+      + (t ? `来場 実人数 <b>${t.students}名</b>${t.visits > t.students ? `（延べ${t.visits}）` : ''}` : '来場 <b>0名</b>')
+      + (c ? `<br>キャンセル ${c}名<span class="pen-pop-note">（申込後、来場なし）</span>` : '')
+      + (!t && areaLabel ? `<br><span class="pen-pop-note">${escapeHtml(areaLabel)}の学校のうち、まだ来場のない学校です</span>` : '');
+  };
+
+  // 1) 下関市・門司区の全校（来場0も表示）
+  const areaSchools = (typeof SCHOOLS_AREA !== 'undefined' && SCHOOLS_AREA[_schoolMapType]) || [];
+  const areaStats = {};  // area -> { total, visited, zero: [name] }
+  areaSchools.forEach(s => {
+    const keys = [_schoolKey(s.name)];
+    if (/^.{2,3}県立/.test(s.name)) keys.push(_schoolKey(s.name.replace(/^.{2,3}県立/, '')));
+    const key = keys.find(k => byKey[k]);
+    const t = key ? byKey[key] : null;
+    if (key) used.add(key);
+    const st = areaStats[s.area] || (areaStats[s.area] = { total: 0, visited: 0, zero: [] });
+    st.total++;
+    if (t) st.visited++; else st.zero.push({ name: s.name, cancels: cancelByKey[keys[0]] || 0 });
+    if (s.lat == null) return;
+    _visitMarker([s.lat, s.lng], t ? t.students : 0, t && max > 0 ? t.students / max : 0, s.name, popup(s.name, t, s.area), !t);
   });
 
-  if (bounds.length) _schoolMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 });
+  // 2) それ以外の地域からの来場（来場のあった学校のみ）
+  let otherPlaced = 0;
+  const far = [];
+  totals.forEach(t => {
+    if (used.has(_schoolKey(t.name))) return;
+    const geo = SCHOOLS_GEO[t.name];
+    if (!geo || !_inRegion(geo)) { far.push(t); return; }
+    _visitMarker(geo, t.students, max > 0 ? t.students / max : 0, t.name, popup(t.name, t), false);
+    otherPlaced++;
+  });
+
+  _mapAreas = VISIT_MAP_AREAS;
+  _renderAreaButtons();
+  setMapArea(_visitArea);
+
+  _renderZeroList(label, areaStats);
 
   const cap = document.getElementById('school-map-caption');
   if (cap) {
-    let text = `丸の大きさ・色の濃さ＝来場者数（実人数）。${label} ${placed}校を表示中`
-      + (missing.length ? ` ／ ${missing.length}校は位置を特定できず非表示` : '');
-    if (document.getElementById('school-map').dataset.analysis === '1' && _schoolMapType === 'elm') {
-      text += '。小学校は学校一覧（生徒数）が未登録のため、来場のあった学校のみ表示しています';
-    }
-    cap.textContent = text;
+    const areaNote = Object.keys(areaStats).length
+      ? `下関市・門司区は全${areaSchools.length}校を表示し、まだ来場のない学校は白い丸の「0」で示しています。` : '';
+    const cancelTotal = Object.values(cancelByKey).reduce((a, c) => a + c, 0);
+    cap.innerHTML = `丸の中の数字＝来場者数（実人数）。数が多いほど丸が大きく、色が濃くなります。${areaNote}`
+      + (otherPlaced ? `その他の地域は来場のあった${otherPlaced}校を表示しています。` : '')
+      + (cancelTotal ? `<br>来場者数には、申込後に来場しなかった方（キャンセル 計${cancelTotal}名）は含めていません。学校をクリックすると件数を確認できます。` : '')
+      + (far.length ? `<br>地図に表示していない学校（遠方または位置不明）：${far.map(t => `${escapeHtml(t.name)}（${t.students}名）`).join('、')}` : '');
   }
+}
+
+// 地図の下に「まだ来場のない学校」を地域ごとに一覧表示
+function _renderZeroList(label, areaStats) {
+  const el = document.getElementById('school-map-zero');
+  if (!el) return;
+  const areas = Object.keys(areaStats);
+  if (!areas.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = `
+    <h3 class="zero-title">まだ来場のない${label}</h3>
+    ${areas.map(a => {
+      const st = areaStats[a];
+      return `<div class="zero-area">
+        <div class="zero-area-head"><strong>${escapeHtml(a)}</strong>
+          <span>全${st.total}校のうち 来場あり <b>${st.visited}</b>校 ／ 来場0 <b class="zero-num">${st.zero.length}</b>校</span></div>
+        <div class="zero-chips">${st.zero.length
+          ? st.zero.map(z => `<span class="zero-chip">${escapeHtml(_shortSchoolName(z.name))}${z.cancels ? `<small>キャンセル${z.cancels}</small>` : ''}</span>`).join('')
+          : '<span class="zero-none">すべての学校から来場がありました</span>'}</div>
+      </div>`;
+    }).join('')}`;
 }
 
 // ---- 浸透度マップ（教員ページの中学校）----
@@ -149,7 +236,7 @@ function _renderPenetrationMap() {
       fillOpacity: s.level === 'nodata' ? 0.7 : 0.92
     })
       .bindTooltip(escapeHtml(s.name.replace(/^.+?[市町村]立/, '')), { direction: 'top', offset: [0, -r] })
-      .bindPopup(_penetrationPopup(s, p.baseRate))
+      .bindPopup(_penetrationPopup(s))
       .addTo(_schoolMapLayer);
 
     if (s.students > 0 && r >= 8) _addCountLabel(pos, s.students, s.level === 'high');
@@ -168,6 +255,7 @@ function _renderPenetrationMap() {
     outsidePlaced++;
   });
 
+  _mapAreas = MAP_AREAS;
   _renderAreaButtons();
   setMapArea(_mapArea);
 
@@ -177,9 +265,9 @@ function _renderPenetrationMap() {
 
   const cap = document.getElementById('school-map-caption');
   if (cap) {
-    cap.textContent = `営業リスト ${p.schools.length}校（うち中3生徒数の登録 ${p.sizedCount}校）を表示。`
+    cap.textContent = `営業リストと北九州市（門司区・小倉北区・小倉南区）の${p.schools.length}校（うち中3生徒数の登録 ${p.sizedCount}校）を表示。`
       + `丸にカーソルを合わせると学校名、クリックで詳細を表示します。`
-      + (outsidePlaced ? `点線の丸は営業リスト外（北九州など）からの来場 ${outsidePlaced}校です。` : '');
+      + (outsidePlaced ? `点線の丸は一覧外の学校からの来場 ${outsidePlaced}校です。` : '');
   }
 }
 
@@ -200,10 +288,10 @@ function _examFiscalShort() {
   return ex && ex.fiscal ? ex.fiscal.replace('入試', '') : '入試';
 }
 
-function _penetrationPopup(s, baseRate) {
+function _penetrationPopup(s) {
   const name = `<strong>${escapeHtml(s.name)}</strong>`;
   if (!s.g3) {
-    return `${name}<br>来場 実人数 <b>${s.students}名</b>${s.exam && (s.exam.total || s.exam.enrolled) ? `<br>${escapeHtml(_examFiscalShort())}：受験 ${s.exam.total}名・入学 ${s.exam.enrolled}名` : ''}<br><span class="pen-pop-note">中3生徒数が営業リストに未登録のため、見込みは算出していません</span>`;
+    return `${name}<br>来場 実人数 <b>${s.students}名</b>${s.cancels ? `<br>キャンセル ${s.cancels}名` : ''}${s.exam && (s.exam.total || s.exam.enrolled) ? `<br>${escapeHtml(_examFiscalShort())}：受験 ${s.exam.total}名・入学 ${s.exam.enrolled}名` : ''}<br><span class="pen-pop-note">中3生徒数が未登録のため、見込みは算出していません</span>`;
   }
   const exp = s.expected.toFixed(1);
   const gap = s.gap >= 0 ? `+${s.gap.toFixed(1)}` : s.gap.toFixed(1);
@@ -211,37 +299,42 @@ function _penetrationPopup(s, baseRate) {
     <table class="pen-pop">
       <tr><th>中3生徒数</th><td>${s.g3}名</td></tr>
       <tr><th>来場 実人数</th><td><b>${s.students}名</b></td></tr>
+      ${s.cancels ? `<tr><th>キャンセル</th><td>${s.cancels}名</td></tr>` : ''}
       <tr><th>来場率</th><td>${(s.rate * 100).toFixed(1)}%</td></tr>
       <tr><th>来場見込み</th><td>${exp}名</td></tr>
       <tr><th>見込みとの差</th><td class="${s.gap < 0 ? 'neg' : 'pos'}">${gap}名</td></tr>
       ${s.exam != null ? `<tr><th>${escapeHtml(_examFiscalShort())} 受験者</th><td>${s.exam.total}名</td></tr>
       <tr><th>${escapeHtml(_examFiscalShort())} 入学者</th><td>${s.exam.enrolled}名</td></tr>` : ''}
     </table>
-    <span class="pen-pop-note">見込み＝中3生徒数×全体の来場率 ${(baseRate * 100).toFixed(1)}%</span>`;
+    <span class="pen-pop-note">見込み＝中3生徒数×${escapeHtml(_regionLabel(s.region))}の来場率 ${(s.baseRate * 100).toFixed(1)}%</span>`;
 }
 
 function _renderAreaButtons() {
   const el = document.getElementById('school-map-area');
   if (!el) return;
-  el.innerHTML = '表示範囲：' + MAP_AREAS.map(a =>
+  el.innerHTML = '表示範囲：' + _mapAreas.map(a =>
     `<button class="pen-area-btn" data-area="${a.key}" onclick="setMapArea('${a.key}')">${a.label}</button>`).join('');
 }
 
 function _setAnalysisPanels(show) {
-  ['school-map-summary', 'school-map-legend', 'school-map-area', 'school-gap-lists'].forEach(id => {
+  ['school-map-summary', 'school-map-legend', 'school-gap-lists'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = show ? '' : 'none';
   });
+  const zero = document.getElementById('school-map-zero');
+  if (zero && show) zero.style.display = 'none';
+}
+
+function _regionLabel(region) {
+  return region === '北九州市' ? '北九州市（門司区・小倉北区・小倉南区）' : '山口県内';
 }
 
 function _renderPenetrationSummary(p) {
   const el = document.getElementById('school-map-summary');
   if (!el) return;
-  const sizedNone = p.schools.filter(s => s.level === 'none').length;
-  el.innerHTML = `
-    <div class="pen-kpi"><span class="pen-kpi-label">全体の来場率</span><span class="pen-kpi-value">${(p.baseRate * 100).toFixed(1)}<small>%</small></span><span class="pen-kpi-sub">来場 ${p.sizedStudents}名 ÷ 中3生徒数 ${p.sizedG3.toLocaleString()}名</span></div>
-    <div class="pen-kpi"><span class="pen-kpi-label">来場のあった学校</span><span class="pen-kpi-value">${p.visitedCount}<small>校 / ${p.schools.length}校</small></span><span class="pen-kpi-sub">営業リスト掲載校のうち</span></div>
-    <div class="pen-kpi"><span class="pen-kpi-label">来場なし（生徒数登録校）</span><span class="pen-kpi-value">${sizedNone}<small>校 / ${p.sizedCount}校</small></span><span class="pen-kpi-sub">地図の赤い白抜きの丸</span></div>`;
+  el.innerHTML = p.regions.map(r => `
+    <div class="pen-kpi"><span class="pen-kpi-label">${escapeHtml(_regionLabel(r.name))}の来場率</span><span class="pen-kpi-value">${(r.baseRate * 100).toFixed(1)}<small>%</small></span><span class="pen-kpi-sub">来場 ${r.sizedStudents}名 ÷ 中3生徒数 ${r.sizedG3.toLocaleString()}名</span></div>
+    <div class="pen-kpi"><span class="pen-kpi-label">来場のあった学校</span><span class="pen-kpi-value">${r.visitedCount}<small>校 / ${r.count}校</small></span><span class="pen-kpi-sub">来場なし（生徒数登録校）${r.sizedNone}校 / ${r.sizedCount}校</span></div>`).join('');
 }
 
 function _renderPenetrationLegend(p) {
@@ -253,7 +346,7 @@ function _renderPenetrationLegend(p) {
   }).join('');
   el.innerHTML = `
     <div class="pen-legend-row">${items}</div>
-    <div class="pen-legend-note">丸の大きさ＝中3生徒数　／　丸の中の数字＝来場者（実人数）　／　色＝「中3生徒数×全体の来場率」で求めた見込みと比べた来場状況</div>`;
+    <div class="pen-legend-note">丸の大きさ＝中3生徒数　／　丸の中の数字＝来場者（実人数、キャンセルは含まない）　／　色＝「中3生徒数×地域の来場率」で求めた見込みと比べた来場状況（山口県内と北九州市は距離が異なるため、来場率を分けて計算しています）</div>`;
 }
 
 function _renderGapLists(p) {

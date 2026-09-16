@@ -48,32 +48,57 @@ function getTopSchools(rows, n = 10) {
 }
 
 // 全イベント合算の学校別来場者数（type: 'jhs'=中学校 / 'elm'=小学校）
-// students=実人数（同一生徒plusseed_idは1名）／ visits=延べ来場数
-function getSchoolTotals(type) {
+// 来場者＝「来場」列が「来場済み」の人のみ（CSVに来場列が無い場合は全員を来場扱い）。
+// 開催日を過ぎたイベントで来場済みでない申込は「キャンセル」として別に数える。開催前のイベントの申込は数えない。
+function _todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function _schoolAttendance(type) {
   const uniq = {};    // school -> Set(生徒キー)
   const visits = {};  // school -> 延べ来場数
+  const cancels = {}; // school -> キャンセル数（延べ）
+  const today = _todayStr();
   for (const event of EVENTS) {
+    if (event.date && event.date > today) continue;  // 開催前
+    const past = !event.date || event.date < today;
     for (const slot of event.csvSlots) {
       if (slot.type !== type) continue;
       const data = getEventData(slot.id);
       if (!data || !data.rows) continue;
+      const hasAttendance = data.rows.some(r => r.attended);
       for (const r of data.rows) {
         const school = (r.school || '').trim();
         if (!school) continue;
+        if (hasAttendance && r.attended !== '来場済み') {
+          if (past) cancels[school] = (cancels[school] || 0) + 1;
+          continue;
+        }
         visits[school] = (visits[school] || 0) + 1;
         if (!uniq[school]) uniq[school] = new Set();
         uniq[school].add(r.plusseed_id ? 'p:' + r.plusseed_id : 'r:' + (r.blend_id || r.app_no || Math.random()));
       }
     }
   }
-  return Object.keys(uniq)
-    .map(name => ({ name, students: uniq[name].size, visits: visits[name] }))
+  const totals = Object.keys(uniq)
+    .map(name => ({ name, students: uniq[name].size, visits: visits[name], cancels: cancels[name] || 0 }))
     .sort((a, b) => b.students - a.students || b.visits - a.visits);
+  return { totals, cancels };
+}
+
+function getSchoolTotals(type) {
+  return _schoolAttendance(type).totals;
+}
+
+// 学校別キャンセル数（来場のない学校も含む）{ 学校名: 件数 }
+function getSchoolCancels(type) {
+  return _schoolAttendance(type).cancels;
 }
 
 // ===== 浸透度分析（中学校）=====
 // 学校マスタ(SCHOOLS_MASTER_JHS)の全校について、中3生徒数から見込まれる来場者数と実績を比べる。
-// 見込み = 中3生徒数 × 基準来場率（生徒数データのある学校全体の 来場実人数 ÷ 中3生徒数）
+// 見込み = 中3生徒数 × 地域の基準来場率（地域＝山口県内／北九州市。生徒数データのある学校の 来場実人数 ÷ 中3生徒数）
 // level: 'none'=来場なし / 'low'=見込みの半分未満 / 'mid'=標準 / 'high'=見込みの1.5倍以上 / 'nodata'=生徒数未登録
 const _SCHOOL_NAME_ALIASES = {
   '下関市立内日中学校':     '下関市立うつい小中学校内日中学校',
@@ -87,34 +112,53 @@ function _normSchoolName(name) {
 
 function getJhsPenetration() {
   if (typeof SCHOOLS_MASTER_JHS === 'undefined') return null;
+  const key = n => _normSchoolName(n).replace(/ヶ/g, 'ケ');
   const visited = {};
-  getSchoolTotals('jhs').forEach(t => { visited[_normSchoolName(t.name)] = t; });
+  getSchoolTotals('jhs').forEach(t => { visited[key(t.name)] = t; });
+  const cancelsByKey = {};
+  Object.entries(getSchoolCancels('jhs')).forEach(([n, c]) => { cancelsByKey[key(n)] = (cancelsByKey[key(n)] || 0) + c; });
 
-  const schools = SCHOOLS_MASTER_JHS.map(m => {
-    const t = visited[m.name];
-    return { ...m, students: t ? t.students : 0, visits: t ? t.visits : 0 };
+  // 山口県内（営業リスト）＋北九州市（schools-area.js）。来場率は地域ごとに計算する
+  const master = SCHOOLS_MASTER_JHS.concat(typeof SCHOOLS_MASTER_KK !== 'undefined' ? SCHOOLS_MASTER_KK : []);
+  const schools = master.map(m => {
+    const t = visited[key(m.name)];
+    return { ...m, region: m.region || '山口県', students: t ? t.students : 0, visits: t ? t.visits : 0,
+      cancels: cancelsByKey[key(m.name)] || 0 };
   });
-  const inMaster = new Set(schools.map(s => s.name));
+  const inMaster = new Set(schools.map(s => key(s.name)));
   const outside = Object.keys(visited)
     .filter(n => !inMaster.has(n))
     .map(n => visited[n]);
 
-  const sized = schools.filter(s => s.g3);
-  const sizedStudents = sized.reduce((a, s) => a + s.students, 0);
-  const sizedG3 = sized.reduce((a, s) => a + s.g3, 0);
-  const baseRate = sizedG3 > 0 ? sizedStudents / sizedG3 : 0;
+  const regions = [...new Set(schools.map(s => s.region))].map(name => {
+    const list = schools.filter(s => s.region === name);
+    const sized = list.filter(s => s.g3);
+    const sizedStudents = sized.reduce((a, s) => a + s.students, 0);
+    const sizedG3 = sized.reduce((a, s) => a + s.g3, 0);
+    return {
+      name, count: list.length, sizedCount: sized.length, sizedG3, sizedStudents,
+      baseRate: sizedG3 > 0 ? sizedStudents / sizedG3 : 0,
+      visitedCount: list.filter(s => s.students > 0).length,
+      sizedNone: sized.filter(s => s.students === 0).length,
+    };
+  });
+  const rateOf = {};
+  regions.forEach(r => { rateOf[r.name] = r.baseRate; });
 
   schools.forEach(s => {
+    s.baseRate = rateOf[s.region];
     if (!s.g3) { s.level = 'nodata'; return; }
-    s.expected = s.g3 * baseRate;
+    s.expected = s.g3 * s.baseRate;
     s.gap = s.students - s.expected;
     s.rate = s.students / s.g3;
     const ratio = s.expected > 0 ? s.students / s.expected : 0;
     s.level = s.students === 0 ? 'none' : ratio < 0.5 ? 'low' : ratio >= 1.5 ? 'high' : 'mid';
   });
 
+  const sized = schools.filter(s => s.g3);
   return {
-    schools, outside, baseRate, sizedCount: sized.length, sizedG3, sizedStudents,
+    schools, outside, regions,
+    sizedCount: sized.length,
     visitedCount: schools.filter(s => s.students > 0).length,
     shortfall: sized.filter(s => s.gap < -0.5).sort((a, b) => a.gap - b.gap),
     surplus:   sized.filter(s => s.gap > 0.5).sort((a, b) => b.gap - a.gap),
