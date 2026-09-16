@@ -1,6 +1,6 @@
 // ===== 学校マップ（Leaflet + 国土地理院 淡色地図）=====
-// 教員ページの中学校 = 浸透度マップ（営業リストの全校を表示。丸の大きさ=中3生徒数、色=地域の平均並みの人数に対する来場状況）
-// それ以外（生徒ページ・小学校）= 来場者数マップ。下関市・門司区の全校（schools-area.js）は来場0も「0」で表示し、
+// 教員ページ = 浸透度マップ（営業リストの全校を表示。丸の大きさ=中3/小6の生徒数、色=地域の平均並みの人数に対する来場状況）
+// 生徒ページ = 来場者数マップ。下関市・門司区の全校（schools-area.js）は来場0も「0」で表示し、
 // それ以外の地域は来場のあった学校のみ表示する
 // 座標は schools-master.js / schools-area.js / schools-geo.js、来場者数は getSchoolTotals() を使用。
 
@@ -61,8 +61,7 @@ function setMapArea(key) {
 }
 
 function _isAnalysisMap(el) {
-  return el.dataset.analysis === '1' && _schoolMapType === 'jhs' && typeof getJhsPenetration === 'function'
-    && typeof SCHOOLS_MASTER_JHS !== 'undefined';
+  return el.dataset.analysis === '1' && typeof hasPenetrationMaster === 'function' && hasPenetrationMaster(_schoolMapType);
 }
 
 function renderSchoolMap(type) {
@@ -76,7 +75,9 @@ function renderSchoolMap(type) {
   const analysis = _isAnalysisMap(el);
   const label = _schoolMapType === 'jhs' ? '中学校' : '小学校';
   const titleEl = document.getElementById('school-map-title');
-  if (titleEl) titleEl.textContent = analysis ? '🗺️ 中学校 浸透度マップ' : `🗺️ ${label}マップ（来場者数）`;
+  if (titleEl) titleEl.textContent = analysis ? `🗺️ ${label} 浸透度マップ` : `🗺️ ${label}マップ（来場者数）`;
+  const subEl = document.getElementById('school-map-subtitle');
+  if (subEl) subEl.textContent = `${_schoolMapType === 'jhs' ? '中3' : '小6'}の生徒数（学校の規模）と、${_schoolMapType === 'jhs' ? '中3' : '小6'}の来場者数を学校ごとに比較（全イベント合算）`;
 
   // ライブラリ/座標データが未読込なら案内だけ出す
   if (typeof L === 'undefined' || typeof SCHOOLS_GEO === 'undefined') {
@@ -270,17 +271,17 @@ function _renderZeroList(label, areaStats) {
     }).join('')}`;
 }
 
-// ---- 浸透度マップ（教員ページの中学校）----
+// ---- 浸透度マップ（教員ページ）----
 function _renderPenetrationMap() {
-  const p = getJhsPenetration();
-  // 入試データ（教員ページで読込済みの場合のみ）
-  const exam = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool() : null;
+  const p = getPenetration(_schoolMapType);
+  // 入試データ（読込済み・共有済みの場合のみ）。中学校→高校入試、小学校→中学入試
+  const exam = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool(_schoolMapType === 'jhs' ? 'high' : 'junior') : null;
   p.schools.forEach(s => { s.exam = exam ? (exam.map[s.name] || { total: 0, enrolled: 0 }) : null; });
   p.examFiscal = exam ? exam.fiscal : '';
   p.examHasPasses = !!(exam && exam.hasPasses);
   _setAnalysisPanels(true);
 
-  const radiusOf = s => s.g3 ? 4 + Math.sqrt(s.g3) * 0.95 : (s.students > 0 ? 8 : 4.5);
+  const radiusOf = s => s.size ? 4 + Math.sqrt(s.size) * 0.95 : (s.students > 0 ? 8 : 4.5);
 
   // 小さい丸が大きい丸に隠れないよう、大きい順に描く
   const ordered = [...p.schools].filter(s => s.lat != null).sort((a, b) => radiusOf(b) - radiusOf(a));
@@ -294,7 +295,7 @@ function _renderPenetrationMap() {
       fillOpacity: s.level === 'nodata' ? 0.7 : 0.92
     })
       .bindTooltip(escapeHtml(s.name.replace(/^.+?[市町村]立/, '')), { direction: 'top', offset: [0, -r] })
-      .bindPopup(_penetrationPopup(s))
+      .bindPopup(_penetrationPopup(s, p))
       .addTo(_schoolMapLayer);
     _addSchoolLabel(pos, s.name, r + 2);
 
@@ -308,7 +309,7 @@ function _renderPenetrationMap() {
     if (!geo || !_inRegion(geo)) return;
     L.circleMarker(geo, { radius: 8, color: '#6E6E8E', weight: 1.5, fillColor: '#FFFFFF', fillOpacity: 0.9, dashArray: '3 2' })
       .bindTooltip(escapeHtml(t.name), { direction: 'top', offset: [0, -8] })
-      .bindPopup(`<strong>${escapeHtml(t.name)}</strong><br>来場 実人数 <b>${t.students}名</b><br><span class="pen-pop-note">営業リスト外の学校</span>`)
+      .bindPopup(`<strong>${escapeHtml(t.name)}</strong><br>来場（${p.gradeLabel}） <b>${t.students}名</b><br><span class="pen-pop-note">営業リスト外の学校</span>`)
       .addTo(_schoolMapLayer);
     _addSchoolLabel(geo, t.name, 10);
     _addCountLabel(geo, t.students, false);
@@ -325,7 +326,8 @@ function _renderPenetrationMap() {
 
   const cap = document.getElementById('school-map-caption');
   if (cap) {
-    cap.textContent = `営業リストと北九州市（門司区・小倉北区・小倉南区）の${p.schools.length}校（うち中3生徒数の登録 ${p.sizedCount}校）を表示。`
+    const listNote = p.type === 'jhs' ? '営業リストと北九州市（門司区・小倉北区・小倉南区）' : '営業リスト（下関市・山陽小野田市・門司区）';
+    cap.textContent = `${listNote}の${p.schools.length}校（うち${p.gradeLabel}生徒数の登録 ${p.sizedCount}校）を表示。来場者は${p.gradeLabel}のみ数えています。`
       + `地図を拡大すると学校名が表示されます（丸にカーソルを合わせても確認できます）。クリックで詳細を表示します。点線は市・区の境界です。`
       + (outsidePlaced ? `点線の丸は一覧外の学校からの来場 ${outsidePlaced}校です。` : '');
   }
@@ -344,20 +346,21 @@ function _addCountLabel(pos, n, onDark) {
 }
 
 function _examFiscalShort() {
-  const ex = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool() : null;
-  return ex && ex.fiscal ? ex.fiscal.replace('入試', '') : '入試';
+  const ex = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool(_schoolMapType === 'jhs' ? 'high' : 'junior') : null;
+  return ex && ex.fiscal ? ex.fiscal : '入試';
 }
 
-function _penetrationPopup(s) {
+function _penetrationPopup(s, p) {
   const name = `<strong>${escapeHtml(s.name)}</strong>`;
-  if (!s.g3) {
-    return `${name}<br>来場 実人数 <b>${s.students}名</b>${s.cancels ? `<br>キャンセル ${s.cancels}名` : ''}${s.exam && (s.exam.total || s.exam.enrolled) ? `<br>${escapeHtml(_examFiscalShort())}：受験 ${s.exam.total}名・入学 ${s.exam.enrolled}名` : ''}<br><span class="pen-pop-note">中3生徒数が未登録のため、平均並みの人数は算出していません</span>`;
+  const g = p.gradeLabel;
+  if (!s.size) {
+    return `${name}<br>来場（${g}） <b>${s.students}名</b>${s.cancels ? `<br>キャンセル ${s.cancels}名` : ''}${s.exam && (s.exam.total || s.exam.enrolled) ? `<br>${escapeHtml(_examFiscalShort())}：受験 ${s.exam.total}名・入学 ${s.exam.enrolled}名` : ''}<br><span class="pen-pop-note">${g}生徒数が未登録のため、平均並みの人数は算出していません</span>`;
   }
   const { exp, diff } = _gapNumbers(s);
   return `${name}
     <table class="pen-pop">
-      <tr><th>中3生徒数</th><td>${s.g3}名</td></tr>
-      <tr><th>来場 実人数</th><td><b>${s.students}名</b></td></tr>
+      <tr><th>${g}生徒数</th><td>${s.size}名</td></tr>
+      <tr><th>来場（${g}）</th><td><b>${s.students}名</b></td></tr>
       ${s.cancels ? `<tr><th>キャンセル</th><td>${s.cancels}名</td></tr>` : ''}
       <tr><th>来場率</th><td>${(s.rate * 100).toFixed(1)}%</td></tr>
       <tr><th>平均並みの人数</th><td>${exp}名</td></tr>
@@ -365,7 +368,7 @@ function _penetrationPopup(s) {
       ${s.exam != null ? `<tr><th>${escapeHtml(_examFiscalShort())} 受験者</th><td>${s.exam.total}名</td></tr>
       <tr><th>${escapeHtml(_examFiscalShort())} 入学者</th><td>${s.exam.enrolled}名</td></tr>` : ''}
     </table>
-    <span class="pen-pop-note">平均並みの人数＝中3生徒数 ${s.g3}名 × ${escapeHtml(_regionLabel(s.region))}の平均来場率 ${(s.baseRate * 100).toFixed(1)}%</span>`;
+    <span class="pen-pop-note">平均並みの人数＝${g}生徒数 ${s.size}名 × ${escapeHtml(_regionLabel(s.region))}の平均来場率 ${(s.baseRate * 100).toFixed(1)}%</span>`;
 }
 
 // 表・吹き出し用の整数表示。平均並みの人数は四捨五入し、差は「来場 − 表示した平均並みの人数」にそろえる
@@ -393,15 +396,16 @@ function _setAnalysisPanels(show) {
   if (zero && show) zero.style.display = 'none';
 }
 
-function _regionLabel(region) {
-  return region === '北九州市' ? '北九州市（門司区・小倉北区・小倉南区）' : '山口県内';
+function _regionLabel(region, type = _schoolMapType) {
+  if (region !== '北九州市') return '山口県内';
+  return type === 'elm' ? '北九州市（門司区）' : '北九州市（門司区・小倉北区・小倉南区）';
 }
 
 function _renderPenetrationSummary(p) {
   const el = document.getElementById('school-map-summary');
   if (!el) return;
   el.innerHTML = p.regions.map(r => `
-    <div class="pen-kpi"><span class="pen-kpi-label">${escapeHtml(_regionLabel(r.name))}の平均来場率</span><span class="pen-kpi-value">${(r.baseRate * 100).toFixed(1)}<small>%</small></span><span class="pen-kpi-sub">来場 ${r.sizedStudents}名 ÷ 中3生徒数 ${r.sizedG3.toLocaleString()}名</span></div>
+    <div class="pen-kpi"><span class="pen-kpi-label">${escapeHtml(_regionLabel(r.name))}の平均来場率</span><span class="pen-kpi-value">${(r.baseRate * 100).toFixed(1)}<small>%</small></span><span class="pen-kpi-sub">${p.gradeLabel}の来場 ${r.sizedStudents}名 ÷ ${p.gradeLabel}生徒数 ${r.sizedTotal.toLocaleString()}名</span></div>
     <div class="pen-kpi"><span class="pen-kpi-label">来場のあった学校</span><span class="pen-kpi-value">${r.visitedCount}<small>校 / ${r.count}校</small></span><span class="pen-kpi-sub">来場なし（生徒数登録校）${r.sizedNone}校 / ${r.sizedCount}校</span></div>`).join('');
 }
 
@@ -414,7 +418,7 @@ function _renderPenetrationLegend(p) {
   }).join('');
   el.innerHTML = `
     <div class="pen-legend-row">${items}</div>
-    <div class="pen-legend-note">丸の大きさ＝中3生徒数　／　丸の中の数字＝来場者（実人数、キャンセルは含まない）　／　色＝「中3生徒数×地域の平均来場率」で求めた平均並みの人数と比べた来場状況（山口県内と北九州市は距離が異なるため、平均来場率を分けて計算しています）</div>`;
+    <div class="pen-legend-note">丸の大きさ＝${p.gradeLabel}生徒数　／　丸の中の数字＝${p.gradeLabel}の来場者（実人数、キャンセルは含まない）　／　色＝「${p.gradeLabel}生徒数×地域の平均来場率」で求めた平均並みの人数と比べた来場状況（山口県内と北九州市は距離が異なるため、平均来場率を分けて計算しています）</div>`;
 }
 
 function _renderGapLists(p) {
@@ -426,13 +430,13 @@ function _renderGapLists(p) {
     const { exp, diff } = _gapNumbers(s);
     return `<tr>
       <td class="gap-name"><i style="background:${lv.fill};border-color:${lv.stroke}"></i>${escapeHtml(s.name.replace(/^.+?[市町村]立/, ''))}<span class="gap-city">${escapeHtml(s.city)}</span></td>
-      <td>${s.g3}</td><td><b>${s.students}</b></td><td>${exp}</td>
+      <td>${s.size}</td><td><b>${s.students}</b></td><td>${exp}</td>
       <td class="${diff < 0 ? 'neg' : 'pos'}">${_signed(diff)}</td>
       ${hasExam ? `<td>${s.exam.total}${p.examHasPasses ? `<span class="gap-sub">／${s.exam.enrolled}</span>` : ''}</td>` : ''}</tr>`;
   };
   const table = (list, empty) => list.length ? `
     <div class="gap-table-wrap"><table class="gap-table">
-      <thead><tr><th>学校</th><th>中3生徒数</th><th>来場</th><th>平均並みの人数</th><th>平均との差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数${p.examHasPasses ? '／入学者数' : ''}">${p.examHasPasses ? '昨年度 受験／入学' : '昨年度受験'}</th>` : ''}</tr></thead>
+      <thead><tr><th>学校</th><th>${p.gradeLabel}生徒数</th><th>来場（${p.gradeLabel}）</th><th>平均並みの人数</th><th>平均との差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数${p.examHasPasses ? '／入学者数' : ''}">${escapeHtml(p.examFiscal)} ${p.examHasPasses ? '受験／入学' : '受験'}</th>` : ''}</tr></thead>
       <tbody>${list.slice(0, 10).map(row).join('')}</tbody>
     </table></div>` : `<p class="gap-empty">${empty}</p>`;
 
@@ -444,7 +448,7 @@ function _renderGapLists(p) {
     <div class="gap-region">
       <h3 class="gap-region-title">${escapeHtml(_regionLabel(r.name))}</h3>
       <p class="gap-region-note">
-        <b>平均並みの人数</b>＝中3生徒数 × ${escapeHtml(_regionLabel(r.name))}の平均来場率 <b>${rate}%</b>（来場 ${r.sizedStudents}名 ÷ 中3生徒数 ${r.sizedG3.toLocaleString()}名）。
+        <b>平均並みの人数</b>＝${p.gradeLabel}生徒数 × ${escapeHtml(_regionLabel(r.name, p.type))}の平均来場率 <b>${rate}%</b>（${p.gradeLabel}の来場 ${r.sizedStudents}名 ÷ ${p.gradeLabel}生徒数 ${r.sizedTotal.toLocaleString()}名）。
         平均的な割合で来場していれば、何人来ている計算になるかを示します。<b>平均との差</b>＝来場 − 平均並みの人数。
         ${r.baseRate < 0.02 ? `<br>※平均来場率が低いため、平均並みの人数は多くの学校で0〜1名です。1〜2名の来場でも「上回る」に入ります。` : ''}
       </p>

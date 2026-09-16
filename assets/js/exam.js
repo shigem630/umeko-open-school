@@ -309,7 +309,7 @@ async function importExamFiles(fileList) {
 
 // ===== 学校名 =====
 // 「下関市立勝山中学校」「勝山中学校」「勝山中」→「勝山中」にそろえて照合する
-function _shortSchoolName(name) {
+function _examShortSchool(name) {
   return String(name || '').replace(/[\s　]/g, '')
     .replace(/^.+?[市町村]立/, '').replace(/^(山口県立|福岡県立|県立|国立|私立)/, '')
     .replace(/学校$/, '') || '不明';
@@ -325,12 +325,13 @@ function _schoolCandidates(short) {
   if (!_schoolIndex) {
     _schoolIndex = {};
     const add = (name, city) => {
-      const k = _shortSchoolName(name);
+      const k = _examShortSchool(name);
       const list = _schoolIndex[k] || (_schoolIndex[k] = []);
       if (!list.some(x => x.name === name)) list.push({ name, city: city || '' });
     };
     if (typeof SCHOOLS_MASTER_JHS !== 'undefined') SCHOOLS_MASTER_JHS.forEach(s => add(s.name, s.city));
     if (typeof SCHOOLS_MASTER_KK !== 'undefined') SCHOOLS_MASTER_KK.forEach(s => add(s.name, s.city));
+    if (typeof SCHOOLS_MASTER_ELM !== 'undefined') SCHOOLS_MASTER_ELM.forEach(s => add(s.name, s.city));
     if (typeof SCHOOLS_AREA !== 'undefined') ['jhs', 'elm'].forEach(t => (SCHOOLS_AREA[t] || []).forEach(s => add(s.name, s.area)));
     if (typeof SCHOOLS_GEO !== 'undefined') Object.keys(SCHOOLS_GEO).forEach(n => { if (/[市町村]立/.test(n)) add(n, ''); });
   }
@@ -339,7 +340,7 @@ function _schoolCandidates(short) {
 
 // 略称 → 正式名（候補が1校に絞れない場合は略称のまま）
 function resolveExamSchoolName(short) {
-  const s = _shortSchoolName(short);
+  const s = _examShortSchool(short);
   const withCity = _schoolCandidates(s).filter(c => c.city);
   const list = withCity.length ? withCity : _schoolCandidates(s);
   return list.length === 1 ? list[0].name : short;
@@ -445,7 +446,7 @@ function getExamSummary(side, fiscal) {
       if (!r.attended || _isTestEntry(r.school)) return;
       if (r.grade && r.grade !== conf.targetGrade) return;
       const key = r.pid ? 'p:' + r.pid : `r:${i}:${j}`;
-      const v = visitors[key] || (visitors[key] = { school: _shortSchoolName(r.school), events: new Set() });
+      const v = visitors[key] || (visitors[key] = { school: _examShortSchool(r.school), events: new Set() });
       v.events.add(i);
     });
   });
@@ -455,7 +456,7 @@ function getExamSummary(side, fiscal) {
   const persons = {};
   apps.forEach(a => {
     const k = personKey(a);
-    const p = persons[k] || (persons[k] = { key: k, school: _shortSchoolName(a.school), os: false, labels: [], passed: false, enrolled: false, passPlan: '', passCourse: '' });
+    const p = persons[k] || (persons[k] = { key: k, school: _examShortSchool(a.school), os: false, labels: [], passed: false, enrolled: false, passPlan: '', passCourse: '' });
     if (a.os) p.os = true;
     p.labels.push(a);
   });
@@ -466,7 +467,7 @@ function getExamSummary(side, fiscal) {
     const a = appByNo[pr.no];
     const k = a ? personKey(a) : 'no:' + pr.no;
     const pp = passPersons[k] || (passPersons[k] = {
-      key: k, school: _shortSchoolName(a ? a.school : pr.school), os: a ? !!(persons[k] && persons[k].os) : null,
+      key: k, school: _examShortSchool(a ? a.school : pr.school), os: a ? !!(persons[k] && persons[k].os) : null,
       linked: !!a, enrolled: false, plan: '', course: '',
     });
     if (pr.enrolled) pp.enrolled = true;
@@ -582,13 +583,13 @@ function getExamSummary(side, fiscal) {
   };
 }
 
-// 正式名 → { total: 受験者, enrolled: 入学者 }（浸透度マップから参照。高校入試の最新年度）
-function getExamCountsBySchool() {
+// 正式名 → { total: 受験者, enrolled: 入学者 }（浸透度マップから参照。side='high'=高校入試 / 'junior'=中学入試 の最新年度）
+function getExamCountsBySchool(side = 'high') {
   const data = _getExamData();
   if (!data || !data.exams) return null;
-  const latest = Object.values(data.exams).filter(e => e.side === 'high').sort((a, b) => b.fiscal - a.fiscal)[0];
+  const latest = Object.values(data.exams).filter(e => e.side === side).sort((a, b) => b.fiscal - a.fiscal)[0];
   if (!latest) return null;
-  const ex = getExamSummary('high', latest.fiscal);
+  const ex = getExamSummary(side, latest.fiscal);
   const map = {};
   ex.schools.forEach(s => {
     const name = resolveExamSchoolName(s.short);

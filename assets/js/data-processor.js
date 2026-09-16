@@ -55,7 +55,8 @@ function _todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function _schoolAttendance(type) {
+// grade を指定すると、その学年（と学年欄が空の人）だけを数える（浸透度分析用。例: '3年生'）
+function _schoolAttendance(type, grade) {
   const uniq = {};    // school -> Set(生徒キー)
   const visits = {};  // school -> 延べ来場数
   const cancels = {}; // school -> キャンセル数（延べ）
@@ -71,6 +72,7 @@ function _schoolAttendance(type) {
       for (const r of data.rows) {
         const school = (r.school || '').trim();
         if (!school) continue;
+        if (grade && r.grade && r.grade !== grade) continue;
         if (hasAttendance && r.attended !== '来場済み') {
           if (past) cancels[school] = (cancels[school] || 0) + 1;
           continue;
@@ -87,57 +89,74 @@ function _schoolAttendance(type) {
   return { totals, cancels };
 }
 
-function getSchoolTotals(type) {
-  return _schoolAttendance(type).totals;
+function getSchoolTotals(type, grade) {
+  return _schoolAttendance(type, grade).totals;
 }
 
 // 学校別キャンセル数（来場のない学校も含む）{ 学校名: 件数 }
-function getSchoolCancels(type) {
-  return _schoolAttendance(type).cancels;
+function getSchoolCancels(type, grade) {
+  return _schoolAttendance(type, grade).cancels;
 }
 
-// ===== 浸透度分析（中学校）=====
-// 学校マスタ(SCHOOLS_MASTER_JHS)の全校について、中3生徒数から見込まれる来場者数と実績を比べる。
-// 平均並みの人数(expected) = 中3生徒数 × 地域の平均来場率（地域＝山口県内／北九州市。生徒数データのある学校の 来場実人数 ÷ 中3生徒数）
+// ===== 浸透度分析（中学校・小学校）=====
+// 学校マスタの全校について、学年の生徒数（中学校=中3、小学校=小6）から見込まれる来場者数と実績を比べる。
+// 平均並みの人数(expected) = 生徒数 × 地域の平均来場率（地域＝山口県内／北九州市。生徒数データのある学校の 来場実人数 ÷ 生徒数）
 // level: 'none'=来場なし / 'low'=平均の半分未満 / 'mid'=平均程度 / 'high'=平均の1.5倍以上 / 'nodata'=生徒数未登録
 const _SCHOOL_NAME_ALIASES = {
   '下関市立内日中学校':     '下関市立うつい小中学校内日中学校',
   '下関市立うつい小中学校': '下関市立うつい小中学校内日中学校',
+  '下関市立内日小学校':     '下関市立うつい小中学校内日小学校',
   '玖珂中学校':            '岩国市立玖珂中学校',
 };
 function _normSchoolName(name) {
-  const n = String(name || '').replace(/[\s\u3000]/g, '');
+  const n = String(name || '').replace(/[\s　]/g, '');
   return _SCHOOL_NAME_ALIASES[n] || n;
 }
 
-function getJhsPenetration() {
-  if (typeof SCHOOLS_MASTER_JHS === 'undefined') return null;
-  const key = n => _normSchoolName(n).replace(/ヶ/g, 'ケ');
-  const visited = {};
-  getSchoolTotals('jhs').forEach(t => { visited[key(t.name)] = t; });
-  const cancelsByKey = {};
-  Object.entries(getSchoolCancels('jhs')).forEach(([n, c]) => { cancelsByKey[key(n)] = (cancelsByKey[key(n)] || 0) + c; });
+const PENETRATION_TYPES = {
+  jhs: { unit: '中学校', gradeLabel: '中3', grade: '3年生', master: () => (typeof SCHOOLS_MASTER_JHS !== 'undefined' ? SCHOOLS_MASTER_JHS : []).concat(typeof SCHOOLS_MASTER_KK !== 'undefined' ? SCHOOLS_MASTER_KK : []), size: m => m.g3 },
+  elm: { unit: '小学校', gradeLabel: '小6', grade: '6年生', master: () => (typeof SCHOOLS_MASTER_ELM !== 'undefined' ? SCHOOLS_MASTER_ELM : []), size: m => m.g6 },
+};
 
-  // 山口県内（営業リスト）＋北九州市（schools-area.js）。来場率は地域ごとに計算する
-  const master = SCHOOLS_MASTER_JHS.concat(typeof SCHOOLS_MASTER_KK !== 'undefined' ? SCHOOLS_MASTER_KK : []);
+function hasPenetrationMaster(type) {
+  return !!PENETRATION_TYPES[type] && PENETRATION_TYPES[type].master().length > 0;
+}
+
+function getPenetration(type = 'jhs') {
+  const conf = PENETRATION_TYPES[type];
+  if (!conf || !hasPenetrationMaster(type)) return null;
+  // 営業リストは「〇〇市立△△中学校」、申込は「△△中学校」「△△中」など表記がゆれるため、市町村立と末尾をそろえて照合する
+  const key = n => _normSchoolName(n).replace(/ヶ/g, 'ケ');
+  const looseKey = n => key(n).replace(/^.+?[市町村]立/, '').replace(/学校$/, '');
+  const visited = {}, visitedLoose = {};
+  // 来場者は対象学年（中学校=中3、小学校=小6）のみ。分母の生徒数と学年をそろえるため
+  getSchoolTotals(type, conf.grade).forEach(t => { visited[key(t.name)] = t; (visitedLoose[looseKey(t.name)] = visitedLoose[looseKey(t.name)] || []).push(t); });
+  const cancelsByKey = {};
+  Object.entries(getSchoolCancels(type, conf.grade)).forEach(([n, c]) => { cancelsByKey[key(n)] = (cancelsByKey[key(n)] || 0) + c; });
+
+  // 略称での一致は、マスタ内で同じ略称の学校が1校だけの場合に限る（同名の別の市の学校と混同しないため）
+  const master = conf.master();
+  const looseCount = {};
+  master.forEach(m => { looseCount[looseKey(m.name)] = (looseCount[looseKey(m.name)] || 0) + 1; });
+  const used = new Set();
   const schools = master.map(m => {
-    const t = visited[key(m.name)];
-    return { ...m, region: m.region || '山口県', students: t ? t.students : 0, visits: t ? t.visits : 0,
+    let ts = visited[key(m.name)] ? [visited[key(m.name)]] : [];
+    if (looseCount[looseKey(m.name)] === 1) (visitedLoose[looseKey(m.name)] || []).forEach(t => { if (!ts.includes(t)) ts.push(t); });
+    ts.forEach(t => used.add(key(t.name)));
+    return { ...m, region: m.region || '山口県', size: conf.size(m) || null,
+      students: ts.reduce((a, t) => a + t.students, 0), visits: ts.reduce((a, t) => a + t.visits, 0),
       cancels: cancelsByKey[key(m.name)] || 0 };
   });
-  const inMaster = new Set(schools.map(s => key(s.name)));
-  const outside = Object.keys(visited)
-    .filter(n => !inMaster.has(n))
-    .map(n => visited[n]);
+  const outside = Object.keys(visited).filter(n => !used.has(n)).map(n => visited[n]);
 
   const regions = [...new Set(schools.map(s => s.region))].map(name => {
     const list = schools.filter(s => s.region === name);
-    const sized = list.filter(s => s.g3);
+    const sized = list.filter(s => s.size);
     const sizedStudents = sized.reduce((a, s) => a + s.students, 0);
-    const sizedG3 = sized.reduce((a, s) => a + s.g3, 0);
+    const sizedTotal = sized.reduce((a, s) => a + s.size, 0);
     return {
-      name, count: list.length, sizedCount: sized.length, sizedG3, sizedStudents,
-      baseRate: sizedG3 > 0 ? sizedStudents / sizedG3 : 0,
+      name, count: list.length, sizedCount: sized.length, sizedTotal, sizedStudents,
+      baseRate: sizedTotal > 0 ? sizedStudents / sizedTotal : 0,
       visitedCount: list.filter(s => s.students > 0).length,
       sizedNone: sized.filter(s => s.students === 0).length,
     };
@@ -147,22 +166,27 @@ function getJhsPenetration() {
 
   schools.forEach(s => {
     s.baseRate = rateOf[s.region];
-    if (!s.g3) { s.level = 'nodata'; return; }
-    s.expected = s.g3 * s.baseRate;
+    if (!s.size) { s.level = 'nodata'; return; }
+    s.expected = s.size * s.baseRate;
     s.gap = s.students - s.expected;
-    s.rate = s.students / s.g3;
+    s.rate = s.students / s.size;
     const ratio = s.expected > 0 ? s.students / s.expected : 0;
     s.level = s.students === 0 ? 'none' : ratio < 0.5 ? 'low' : ratio >= 1.5 ? 'high' : 'mid';
   });
 
-  const sized = schools.filter(s => s.g3);
+  const sized = schools.filter(s => s.size);
   return {
+    type, unit: conf.unit, gradeLabel: conf.gradeLabel,
     schools, outside, regions,
     sizedCount: sized.length,
     visitedCount: schools.filter(s => s.students > 0).length,
     shortfall: sized.filter(s => s.gap < -0.5).sort((a, b) => a.gap - b.gap),
     surplus:   sized.filter(s => s.gap > 0.5).sort((a, b) => b.gap - a.gap),
   };
+}
+
+function getJhsPenetration() {
+  return getPenetration('jhs');
 }
 
 // Returns top prefectures
