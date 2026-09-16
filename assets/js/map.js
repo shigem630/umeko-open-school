@@ -130,8 +130,9 @@ function _renderPenetrationMap() {
   const p = getJhsPenetration();
   // 入試データ（教員ページで読込済みの場合のみ）
   const exam = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool() : null;
-  p.schools.forEach(s => { s.exam = exam ? (exam.map[s.name] || 0) : null; });
+  p.schools.forEach(s => { s.exam = exam ? (exam.map[s.name] || { total: 0, enrolled: 0 }) : null; });
   p.examFiscal = exam ? exam.fiscal : '';
+  p.examHasPasses = !!(exam && exam.hasPasses);
   _setAnalysisPanels(true);
 
   const radiusOf = s => s.g3 ? 4 + Math.sqrt(s.g3) * 0.95 : (s.students > 0 ? 8 : 4.5);
@@ -202,7 +203,7 @@ function _examFiscalShort() {
 function _penetrationPopup(s, baseRate) {
   const name = `<strong>${escapeHtml(s.name)}</strong>`;
   if (!s.g3) {
-    return `${name}<br>来場 実人数 <b>${s.students}名</b>${s.exam ? `<br>受験者（${escapeHtml(_examFiscalShort())}） ${s.exam}名` : ''}<br><span class="pen-pop-note">中3生徒数が営業リストに未登録のため、見込みは算出していません</span>`;
+    return `${name}<br>来場 実人数 <b>${s.students}名</b>${s.exam && (s.exam.total || s.exam.enrolled) ? `<br>${escapeHtml(_examFiscalShort())}：受験 ${s.exam.total}名・入学 ${s.exam.enrolled}名` : ''}<br><span class="pen-pop-note">中3生徒数が営業リストに未登録のため、見込みは算出していません</span>`;
   }
   const exp = s.expected.toFixed(1);
   const gap = s.gap >= 0 ? `+${s.gap.toFixed(1)}` : s.gap.toFixed(1);
@@ -213,7 +214,8 @@ function _penetrationPopup(s, baseRate) {
       <tr><th>来場率</th><td>${(s.rate * 100).toFixed(1)}%</td></tr>
       <tr><th>来場見込み</th><td>${exp}名</td></tr>
       <tr><th>見込みとの差</th><td class="${s.gap < 0 ? 'neg' : 'pos'}">${gap}名</td></tr>
-      ${s.exam != null ? `<tr><th>受験者（${escapeHtml(_examFiscalShort())}）</th><td>${s.exam}名</td></tr>` : ''}
+      ${s.exam != null ? `<tr><th>${escapeHtml(_examFiscalShort())} 受験者</th><td>${s.exam.total}名</td></tr>
+      <tr><th>${escapeHtml(_examFiscalShort())} 入学者</th><td>${s.exam.enrolled}名</td></tr>` : ''}
     </table>
     <span class="pen-pop-note">見込み＝中3生徒数×全体の来場率 ${(baseRate * 100).toFixed(1)}%</span>`;
 }
@@ -265,11 +267,11 @@ function _renderGapLists(p) {
       <td class="gap-name"><i style="background:${lv.fill};border-color:${lv.stroke}"></i>${escapeHtml(s.name.replace(/^.+?[市町村]立/, ''))}<span class="gap-city">${escapeHtml(s.city)}</span></td>
       <td>${s.g3}</td><td><b>${s.students}</b></td><td>${s.expected.toFixed(1)}</td>
       <td class="${s.gap < 0 ? 'neg' : 'pos'}">${gap}</td>
-      ${hasExam ? `<td>${s.exam}</td>` : ''}</tr>`;
+      ${hasExam ? `<td>${s.exam.total}${p.examHasPasses ? `<span class="gap-sub">／${s.exam.enrolled}</span>` : ''}</td>` : ''}</tr>`;
   };
   const table = (list, empty) => list.length ? `
     <div class="gap-table-wrap"><table class="gap-table">
-      <thead><tr><th>学校</th><th>中3生徒数</th><th>来場</th><th>見込み</th><th>差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数">昨年度受験</th>` : ''}</tr></thead>
+      <thead><tr><th>学校</th><th>中3生徒数</th><th>来場</th><th>見込み</th><th>差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数${p.examHasPasses ? '／入学者数' : ''}">${p.examHasPasses ? '昨年度 受験／入学' : '昨年度受験'}</th>` : ''}</tr></thead>
       <tbody>${list.slice(0, 10).map(row).join('')}</tbody>
     </table></div>` : `<p class="gap-empty">${empty}</p>`;
 
