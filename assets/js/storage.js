@@ -115,11 +115,20 @@ function clearAllData() {
 
 // Get combined rows for an event (merges jhs + elm if combined)
 // _slot property is added here at read time, never stored in localStorage
+// 音楽科体験レッスン会（type: 'music'）は中学生/小学生の集計と分けるため含めない → getMusicRows()
 function getEventRows(eventKey) {
+  return _getSlotRows(eventKey, slot => slot.type !== 'music');
+}
+
+function getMusicRows(eventKey) {
+  return _getSlotRows(eventKey, slot => slot.type === 'music');
+}
+
+function _getSlotRows(eventKey, slotFilter) {
   const event = EVENTS.find(e => e.key === eventKey);
   if (!event) return [];
   const rows = [];
-  for (const slot of event.csvSlots) {
+  for (const slot of event.csvSlots.filter(slotFilter)) {
     const data = getEventData(slot.id);
     if (data && data.rows) {
       rows.push(...data.rows.map(r => ({ ...r, _slot: slot.type })));

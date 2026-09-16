@@ -387,6 +387,7 @@ function buildBeforePanelHTML(key, rows = []) {
 
   return `
     ${breakdownCard}
+    ${buildMusicCardHTML(key)}
     <div class="card chart-row">
       <div class="chart-toolbar">
         <div class="chart-title">📈 日別申込推移</div>
@@ -524,6 +525,48 @@ function buildBeforePanelHTML(key, rows = []) {
     </div>
     `}
   `;
+}
+
+// 音楽科体験レッスン会（7/25・8/29のみ。CSV未読込なら表示しない）
+function buildMusicCardHTML(key) {
+  const m = getMusicSummary(key);
+  if (!m) return '';
+  const chips = list => list.length
+    ? list.map(([name, n]) => `<span class="music-chip">${escapeHtml(name)}<b>${n}人</b></span>`).join('')
+    : '<span class="music-none">回答なし</span>';
+  const item = (label, body) => `
+    <div class="music-row">
+      <div class="music-row-label">${label}</div>
+      <div class="music-row-body">${body}</div>
+    </div>`;
+  const hc = m.headcount;
+  return `
+    <div class="card music-card">
+      <div class="music-head">
+        <div class="card-title" style="margin-bottom:0">🎹 音楽科体験レッスン会</div>
+        <div class="music-note">中学生・小学生の集計（上記・下記のグラフ）には含めていません</div>
+      </div>
+      <div class="music-stats">
+        <div class="music-stat"><span class="music-stat-label">申込</span><span class="music-stat-value">${hc.students}<small>人</small></span></div>
+        <div class="music-stat"><span class="music-stat-label">保護者・同伴者</span><span class="music-stat-value">${hc.guardians}<small>人</small></span></div>
+        <div class="music-stat total"><span class="music-stat-label">来場見込み</span><span class="music-stat-value">${hc.total}<small>人</small></span></div>
+      </div>
+      ${m.visitorAvailable ? `
+      <div class="breakdown-visitor-row">
+        <span class="breakdown-visitor-new">🆕 新規 ${m.newcomers}人</span>
+        <span class="breakdown-visitor-return">🔁 再訪 ${m.returning}人</span>
+      </div>` : ''}
+      <div class="music-rows">
+        ${item('専攻・楽器', chips(m.majors))}
+        ${item('学年', chips(m.grades))}
+        ${item('希望・参加状況', `
+          <span class="music-chip">ソルフェージュ希望<b>${m.solfege}人</b></span>
+          <span class="music-chip">個別面談希望<b>${m.consult}人</b></span>
+          <span class="music-chip">同日の普通科OSにも参加<b>${m.generalOs}人</b></span>`)}
+        ${item('知ったきっかけ', chips(m.channels))}
+        ${item('中学校', chips(m.schools))}
+      </div>
+    </div>`;
 }
 
 function buildAfterPanelHTML(key) {

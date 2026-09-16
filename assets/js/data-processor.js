@@ -208,6 +208,46 @@ function getResponseCounts(rows) {
   return { total: responded.length, jhs, elm };
 }
 
+// ===== 音楽科体験レッスン会（7/25・8/29）=====
+// 人数が少ないため、グラフではなく項目ごとの人数一覧で表示する
+function getMusicSummary(eventKey) {
+  const rows = getMusicRows(eventKey);
+  if (!rows.length) return null;
+
+  const countBy = (fn) => {
+    const counts = {};
+    rows.forEach(r => {
+      const v = fn(r);
+      if (v) counts[v] = (counts[v] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  };
+  const wantCount = field => rows.filter(r => _parseWants(r[field]) === 'want').length;
+
+  // 以前のイベント（普通科・音楽科とも）に参加したことがあるか
+  const eventIdx = EVENTS.findIndex(e => e.key === eventKey);
+  const previousIds = new Set();
+  for (let i = 0; i < eventIdx; i++) {
+    [...getEventRows(EVENTS[i].key), ...getMusicRows(EVENTS[i].key)]
+      .forEach(r => { if (r.plusseed_id) previousIds.add(r.plusseed_id); });
+  }
+  const withId = rows.filter(r => r.plusseed_id);
+
+  return {
+    headcount: getHeadcount(rows),
+    majors:   countBy(r => r.music_major),
+    grades:   countBy(r => r.grade),
+    channels: countBy(r => r.channel ? (CHANNEL_ALIASES[r.channel] || r.channel) : ''),
+    schools:  countBy(r => r.school),
+    solfege:  wantCount('wants_solfege'),
+    consult:  wantCount('wants_consultation'),
+    generalOs: wantCount('joins_general_os'),
+    returning: withId.filter(r => previousIds.has(r.plusseed_id)).length,
+    newcomers: withId.filter(r => !previousIds.has(r.plusseed_id)).length,
+    visitorAvailable: withId.length > 0,
+  };
+}
+
 // Calculate required daily pace to reach goal
 function calcPace(current, goal, eventDateStr) {
   const today = new Date();

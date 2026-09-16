@@ -6,7 +6,8 @@ const EVENTS = [
     date:     '2026-07-25',
     csvSlots: [
       { id: '0725_jhs', label: '中学生CSV（午前）', type: 'jhs' },
-      { id: '0725_elm', label: '小学生CSV（午後）', type: 'elm' }
+      { id: '0725_elm', label: '小学生CSV（午後）', type: 'elm' },
+      { id: '0725_music', label: '音楽科体験レッスン会CSV', type: 'music' }  // 中学生・小学生の集計には含めない
     ],
     combined: true,
     defaultGoal: 100
@@ -18,7 +19,8 @@ const EVENTS = [
     date:     '2026-08-29',
     csvSlots: [
       { id: '0829_jhs', label: '中学生CSV（午前）', type: 'jhs' },
-      { id: '0829_elm', label: '小学生CSV（午後）', type: 'elm' }
+      { id: '0829_elm', label: '小学生CSV（午後）', type: 'elm' },
+      { id: '0829_music', label: '音楽科体験レッスン会CSV', type: 'music' }  // 中学生・小学生の集計には含めない
     ],
     combined: true,
     defaultGoal: 100
@@ -75,6 +77,7 @@ const CSV_COLUMN_MAP = {
   '学年':                  'grade',
   '保護者・引率者数':        'attendants',
   '保護者・引率者数（0とご入力下さい）': 'attendants', // 上限設定後の新列名
+  '保護者・引率者・同伴者数': 'attendants',            // 音楽科CSV用
 
   // 中学校連絡（中学生のみ）
   '中学校への「参加連絡（公欠・出席扱い等の手続き）」を希望しますか？': 'wants_school_notice',
@@ -94,6 +97,12 @@ const CSV_COLUMN_MAP = {
   // 申込経路（小学生CSVは末尾の「）」が1つ多い）
   '本校のオープンスクールを知った一番のきっかけは何ですか？（もっとも当てはまるものを１つ）': 'channel',
   '本校のオープンスクールを知った一番のきっかけは何ですか？（もっとも当てはまるものを１つ））': 'channel', // 小学生CSV用
+  '本校のオープンスクールはどのようにして知りましたか？（初めて知った時）': 'channel', // 音楽科CSV用
+
+  // 音楽科体験レッスン会CSVのみ（専攻・楽器名の列は文言が回ごとに違うため csv-parser.js でキーワード検出）
+  '個別面談を希望しますか？': 'wants_consultation',
+  'ソルフェージュ（聴音・視唱）のレッスンを希望しますか？': 'wants_solfege',
+  '同日午前中の普通科オープンスクールに参加されますか。': 'joins_general_os',
 
   '今回、参加してみようと思った「一番の理由」は何ですか？': 'reason',
 

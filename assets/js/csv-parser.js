@@ -30,6 +30,19 @@ function parseCSVFile(file, slotId, onSuccess, onError) {
             return;
           }
 
+          // 音楽科CSVと普通科CSVの取り違えを防ぐ（専攻・楽器名の列の有無で判定）
+          const headers = result.meta && result.meta.fields ? result.meta.fields : [];
+          const isMusicCsv = headers.some(h => h.startsWith('専攻') || h.includes('楽器名'));
+          const isMusicSlot = /_music$/.test(slotId);
+          if (isMusicSlot && !isMusicCsv) {
+            onError('音楽科体験レッスン会のCSVではないようです（「専攻、楽器名」の列がありません）。ファイルをご確認ください。');
+            return;
+          }
+          if (!isMusicSlot && isMusicCsv) {
+            onError('音楽科体験レッスン会のCSVです。「音楽科CSV」の欄にアップロードしてください。');
+            return;
+          }
+
           const rows = result.data
             .map(row => normalizeRow(row, eventYear))
             .filter(r => r !== null);
@@ -100,11 +113,19 @@ function normalizeRow(raw, year = new Date().getFullYear()) {
   if (!row.wants_consultation) {
     for (const [k, v] of Object.entries(raw)) {
       // 「相談内容をご入力ください」の自由記述欄は対象外（希望可否の列だけ拾う）
-      if (k.includes('相談') && !k.includes('入力') && !k.includes('内容') &&
+      if ((k.includes('相談') || k.includes('面談')) && !k.includes('入力') && !k.includes('内容') &&
           (k.includes('希望しますか') || k.includes('終了') || k.includes('上限'))) {
         row.wants_consultation = (v || '').trim();
         break;
       }
+    }
+  }
+
+  // 音楽科CSV: 専攻・楽器名（「※管楽器は…」「※管楽器・弦楽器は…」など注記が回ごとに違う）
+  for (const [k, v] of Object.entries(raw)) {
+    if (k.startsWith('専攻') || k.includes('楽器名')) {
+      row.music_major = (v || '').trim();
+      break;
     }
   }
 
