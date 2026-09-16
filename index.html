@@ -6,6 +6,7 @@
   <title>オープンスクール申込状況 | 梅光学院中学校・高等学校</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="assets/css/variables.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/components.css">
@@ -98,6 +99,21 @@
       </div>
     </section>
 
+    <!-- Section 4: 学校マップ -->
+    <section class="school-map-section">
+      <div class="section-header st-header">
+        <h2 class="section-title" id="school-map-title">🗺️ 中学校マップ（来場者数）</h2>
+        <div class="st-toggle">
+          <button class="map-toggle-btn active" data-type="jhs" onclick="renderSchoolMap('jhs')">中学校</button>
+          <button class="map-toggle-btn" data-type="elm" onclick="renderSchoolMap('elm')">小学校</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="school-map" class="school-map"></div>
+        <div id="school-map-caption" class="map-caption"></div>
+      </div>
+    </section>
+
   </main>
 
   <!-- Phase 9-4: subtle admin link in footer -->
@@ -113,6 +129,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <!-- App scripts (order matters - dependencies first) -->
 <script src="assets/js/config.js"></script>
@@ -121,6 +138,8 @@
 <script src="assets/js/data-processor.js"></script>
 <script src="assets/js/charts.js"></script>
 <script src="assets/js/annotations.js"></script>
+<script src="assets/js/schools-geo.js"></script>
+<script src="assets/js/map.js"></script>
 <script src="assets/js/ui.js"></script>
 
 <script>
@@ -139,6 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderProgressCards('student');
   initEventTabs();
   renderSchoolTotals('jhs');
+  renderSchoolMap('jhs');
 
   const hasAnyData = EVENTS.some(e => getEventRows(e.key).length > 0);
   if (!hasAnyData) {
