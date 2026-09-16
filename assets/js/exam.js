@@ -14,8 +14,8 @@ const EXAM_SHARED_KEY = 'exam_shared';        // data.json から取り込んだ
 const EXAM_SHARE_KEY_KEY = 'exam_share_key';  // 管理者PCに保存する共有用の鍵（閲覧用パスワードは保存しない）
 let _sharedExamData = null;                   // 復号した共有データ（メモリ上のみ）
 
-// 今年度のオープンスクールの実施年度（config.js の EVENTS から判定）
-const OS_YEAR = parseInt(EVENTS[0].date.slice(0, 4), 10);
+// 今年度のオープンスクールの実施年度（config.js）
+const OS_YEAR = CURRENT_YEAR;
 
 const EXAM_SIDES = {
   high:   { label: '高校入試', audience: '中学生', schoolCol: '中学校', unit: '中学校', targetGrade: '3年生', gradeLabel: '中3', slotTypes: ['jhs', 'music'] },
@@ -71,8 +71,17 @@ async function _importAesKey(b64) {
 // 公開用：入試データを暗号化して返す（このパソコンに入試データが無ければ、取り込み済みの共有データをそのまま引き継ぐ）
 // 戻り値: { shared: 暗号化データ or null, note: 利用者への補足 }
 async function buildSharedExamPayload() {
-  const rec = _getLocalExamData();
-  if (!rec) return { shared: safeGet(EXAM_SHARED_KEY), note: '' };
+  // 過去の年度のオープンスクールのデータ（このパソコンで読み込んだもの。無ければ共有済みのものを引き継ぐ）
+  const pastSlots = { ...((_sharedExamData && _sharedExamData.pastSlots) || {}) };
+  let localPast = 0;
+  allSlots().filter(x => x.year !== CURRENT_YEAR).forEach(({ slot }) => {
+    const d = safeGet('data_' + slot.id);
+    if (d) { pastSlots[slot.id] = d; localPast++; }
+  });
+  const local = _getLocalExamData();
+  if (!local && !localPast) return { shared: safeGet(EXAM_SHARED_KEY), note: '' };
+  const base = local || _sharedExamData || _emptyExamData();
+  const rec = { version: 2, exams: base.exams || {}, visits: base.visits || {}, pastSlots };
 
   // 閲覧用パスワードが変更されていたら、保存済みの鍵は使わず入力し直してもらう
   const saved = safeGet(EXAM_SHARE_KEY_KEY);
@@ -90,7 +99,7 @@ async function buildSharedExamPayload() {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await _importAesKey(keyB64),
     new TextEncoder().encode(JSON.stringify(rec)));
-  return { shared: { v: 2, iv: bytesToBase64(iv), data: bytesToBase64(new Uint8Array(cipher)) }, note: '入試データも教職員に共有しました。' };
+  return { shared: { v: 2, iv: bytesToBase64(iv), data: bytesToBase64(new Uint8Array(cipher)) }, note: '入試データ・過去の年度のデータも教職員に共有しました。' };
 }
 
 // 閲覧用：取り込み済みの暗号化データを復号してメモリに置く
@@ -107,6 +116,7 @@ async function loadSharedExamRecords() {
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64ToBytes(blob.iv) },
       await _importAesKey(keyB64), base64ToBytes(blob.data));
     _sharedExamData = _migrateExamData(JSON.parse(new TextDecoder().decode(plain)));
+    if (typeof setSharedSlotData === 'function') setSharedSlotData(_sharedExamData && _sharedExamData.pastSlots);
     return (_sharedExamStatus = _sharedExamData ? 'ok' : 'nodata');
   } catch (_) {
     return (_sharedExamStatus = 'fail');
@@ -180,7 +190,8 @@ async function importExamFiles(fileList) {
 
   const newApplicants = {};  // 'high-2026' -> { side, fiscal, files, rows, latestApplied }
   const newPasses = [];      // { side, file, rows }
-  const newEvents = [];      // { name, side, kind, rows }
+  const newEvents = [];      // { name, side, kind, rows }（回の設定が無い年度の申込一覧）
+  const newSlotEvents = [];  // 回の欄に読み込んだ申込一覧
   const skipped = { current: [], empty: [], unknown: [] };
 
   for (const file of files) {
@@ -233,6 +244,11 @@ async function importExamFiles(fileList) {
       const rows = result.data.filter(r => val(r, '申込番号') || val(r, 'BLEND管理番号'));
       if (!rows.length) { skipped.empty.push(file.name); continue; }
       if (osYear >= OS_YEAR || rows.some(r => currentIds.has(val(r, 'BLEND管理番号')))) { skipped.current.push(file.name); continue; }
+      // その年度の回の設定がある場合は、回の欄（年度切替で見られるデータ）に読み込む
+      if (EVENTS_BY_YEAR[osYear]) {
+        const res = await importOsCsvToYear(file, osYear, headers);
+        if (res.ok) { newSlotEvents.push(res); continue; }
+      }
       const name = _eventNameFromFile(file.name);
       newEvents.push({
         name, side,
@@ -246,6 +262,7 @@ async function importExamFiles(fileList) {
   }
 
   const data = _getLocalExamData() || (_sharedExamData ? JSON.parse(JSON.stringify(_sharedExamData)) : _emptyExamData());
+  delete data.pastSlots;  // 過去の年度の回のデータは data_<スロット> に保存する（入試データとは別）
   const now = new Date().toISOString();
 
   // 受験者一覧：入試区分（ファイル）ごとに置き換え
@@ -290,7 +307,7 @@ async function importExamFiles(fileList) {
   const nApp = Object.values(newApplicants).reduce((a, b) => a + b.files.length, 0);
   if (nApp) parts.push(`受験者一覧 ${nApp}ファイル`);
   if (newPasses.length) parts.push(`合格者一覧 ${newPasses.length}ファイル`);
-  if (newEvents.length) parts.push(`${osYear}年度のオープンスクール等 ${newEvents.length}回分`);
+  if (newEvents.length + newSlotEvents.length) parts.push(`${osYear}年度のオープンスクール等 ${newEvents.length + newSlotEvents.length}件`);
   const notes = [];
   if (skipped.empty.length) notes.push(`0件のため読み飛ばし：${skipped.empty.join('、')}`);
   if (skipped.current.length) notes.push(`今年度（${OS_YEAR}年度）の申込一覧のため読み飛ばし：${skipped.current.join('、')}（今年度分は上の各回の欄で読み込んでください。過去の年度のファイルなら「過去のオープンスクールの年度」を確認してください）`);
@@ -300,6 +317,13 @@ async function importExamFiles(fileList) {
     showToast(`読み込めるファイルがありませんでした。${notes.join(' ／ ')}`, 'error');
     return;
   }
+  // 回の欄に読み込んだ行事は、以前の簡易な来場記録（visits）から外す（二重に数えないため）
+  newSlotEvents.forEach(r => {
+    const y = data.visits[osYear];
+    if (!y) return;
+    const side = r.slot.type === 'elm' ? 'junior' : 'high';
+    Object.keys(y.events).forEach(k => { if (k.startsWith(side + ':') && normEventFileName(k.slice(side.length + 1)) === normEventFileName(r.slot.file)) delete y.events[k]; });
+  });
   if (safeSet(EXAM_STORAGE_KEY, data)) {
     safeRemove(EXAM_STORAGE_KEY_V1);
     showToast(`読み込みました（${parts.join('・')}）。${notes.length ? ' ' + notes.join(' ／ ') : ''}`, notes.length ? 'warning' : 'success');
@@ -375,39 +399,41 @@ function _todayYmd() {
 }
 
 // 回の並び順：オープンスクール（第1回→第4回）→ 説明会 → 音楽科
+// 回の並び順：開催日のある回は日付順、無い回（簡易な来場記録）はオープンスクール（第1回→）→ 説明会 → 音楽科
 function _eventOrder(e) {
+  if (e.date) return +e.date.replace(/-/g, '');
   const m = e.name.normalize('NFKC').match(/第(\d+)回/);
   const kind = { os: 0, briefing: 1, music: 2 }[e.kind] ?? 3;
-  const date = e.date ? +e.date.slice(5).replace('-', '') : 0;  // MMDD
-  return kind * 1000000 + (m ? +m[1] : 0) * 10000 + date;
+  return 1e9 + kind * 1000 + (m ? +m[1] : 0);
 }
 
-// 募集年度 fiscal の来場記録（前年度のオープンスクール等）。今年度分は上の各回の欄のデータを使う
+// 募集年度 fiscal の来場記録（前年度のオープンスクール等）
+// その年度の回の欄にデータがあればそれを使い、無い行事だけ簡易な来場記録（visits）で補う
 function _cohortEvents(side, fiscal) {
   const osYear = fiscal - 1;
   const conf = EXAM_SIDES[side];
   const events = [];
+  const covered = new Set();
+  const today = _todayYmd();
+  (EVENTS_BY_YEAR[osYear] || []).forEach(ev => ev.csvSlots.forEach(s => {
+    if (!conf.slotTypes.includes(s.type)) return;
+    const d = getEventData(s.id);
+    if (!d || !d.rows || !d.rows.length) return;
+    if (s.file) covered.add(normEventFileName(s.file));
+    const hasAttendance = d.rows.some(r => r.attended);
+    const held = ev.date <= today;
+    events.push({
+      name: s.type === 'music' ? `${ev.musicLabel || '音楽科体験レッスン会'}（${ev.label}）` : ev.fullLabel,
+      side, kind: s.type === 'music' ? 'music' : ev.fullLabel.includes('説明会') ? 'briefing' : 'os', date: ev.date,
+      rows: d.rows.map(r => ({
+        pid: r.plusseed_id || '', school: r.school || '', grade: r.grade || '',
+        attended: hasAttendance ? r.attended === '来場済み' : held,
+      })),
+    });
+  }));
   const data = _getExamData();
   const y = data && data.visits && data.visits[osYear];
-  if (y) Object.values(y.events).filter(e => e.side === side).forEach(e => events.push(e));
-  if (osYear === OS_YEAR) {
-    const today = _todayYmd();
-    EVENTS.forEach(ev => ev.csvSlots.forEach(s => {
-      if (!conf.slotTypes.includes(s.type)) return;
-      const d = getEventData(s.id);
-      if (!d || !d.rows || !d.rows.length) return;
-      const hasAttendance = d.rows.some(r => r.attended);
-      const held = ev.date <= today;
-      events.push({
-        name: s.type === 'music' ? `音楽科体験レッスン会（${ev.label}）` : `${ev.fullLabel}`,
-        side, kind: s.type === 'music' ? 'music' : 'os', date: ev.date,
-        rows: d.rows.map(r => ({
-          pid: r.plusseed_id || '', school: r.school || '', grade: r.grade || '',
-          attended: hasAttendance ? r.attended === '来場済み' : held,
-        })),
-      });
-    }));
-  }
+  if (y) Object.values(y.events).filter(e => e.side === side && !covered.has(normEventFileName(e.name))).forEach(e => events.push(e));
   return events.sort((a, b) => _eventOrder(a) - _eventOrder(b));
 }
 
@@ -420,7 +446,9 @@ function getExamCohorts() {
     Object.values(data.exams || {}).forEach(e => add(e.side, e.fiscal));
     Object.entries(data.visits || {}).forEach(([year, y]) => Object.values(y.events).forEach(e => add(e.side, +year + 1)));
   }
-  Object.keys(EXAM_SIDES).forEach(side => { if (_cohortEvents(side, OS_YEAR + 1).length) add(side, OS_YEAR + 1); });
+  Object.keys(EVENTS_BY_YEAR).forEach(year => Object.keys(EXAM_SIDES).forEach(side => {
+    if (_cohortEvents(side, +year + 1).length) add(side, +year + 1);
+  }));
   return Object.values(set);
 }
 
@@ -583,13 +611,15 @@ function getExamSummary(side, fiscal) {
   };
 }
 
-// 正式名 → { total: 受験者, enrolled: 入学者 }（浸透度マップから参照。side='high'=高校入試 / 'junior'=中学入試 の最新年度）
-function getExamCountsBySchool(side = 'high') {
+// 正式名 → { total: 受験者, enrolled: 入学者 }（浸透度マップから参照。side='high'=高校入試 / 'junior'=中学入試）
+// fiscals を指定すると、その順に入試データのある年度を探す（無指定なら最新年度）
+function getExamCountsBySchool(side = 'high', fiscals) {
   const data = _getExamData();
   if (!data || !data.exams) return null;
-  const latest = Object.values(data.exams).filter(e => e.side === side).sort((a, b) => b.fiscal - a.fiscal)[0];
-  if (!latest) return null;
-  const ex = getExamSummary(side, latest.fiscal);
+  const list = Object.values(data.exams).filter(e => e.side === side).sort((a, b) => b.fiscal - a.fiscal);
+  const target = fiscals ? fiscals.map(f => list.find(e => e.fiscal === f)).find(Boolean) : list[0];
+  if (!target) return null;
+  const ex = getExamSummary(side, target.fiscal);
   const map = {};
   ex.schools.forEach(s => {
     const name = resolveExamSchoolName(s.short);
@@ -602,6 +632,11 @@ function getExamCountsBySchool(side = 'high') {
 
 // ===== 表示 =====
 const _examView = { side: 'high', fiscal: null, sort: 'enrolled' };
+
+// ページの表示年度を切り替えたとき、入試欄をその年度に来場した学年の募集年度（翌年度）に合わせる
+function syncExamViewToYear(year) {
+  _examView.fiscal = year + 1;
+}
 
 function refreshExamViews() {
   renderExamUploadState();

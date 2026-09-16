@@ -32,13 +32,12 @@ function saveGitHubConfig() {
 }
 
 // ===== BUILD EXPORT DATA =====
+// 公開する slots は今年度分のみ。過去の年度のデータは入試データと一緒に暗号化して共有する（exam.js の buildSharedExamPayload）
 function buildExportData() {
   const slots = {};
-  EVENTS.forEach(event => {
-    event.csvSlots.forEach(slot => {
-      const data = getEventData(slot.id);
-      if (data) slots[slot.id] = data;
-    });
+  allSlots(CURRENT_YEAR).forEach(({ slot }) => {
+    const data = safeGet('data_' + slot.id);
+    if (data) slots[slot.id] = data;
   });
   const config = getConfig();
   return {
@@ -79,7 +78,7 @@ async function syncFromGitHubIfNewer() {
     if (!res.ok) return false;
     const data = await res.json();
     const localSynced  = safeGet('last_synced_at') || '';
-    const hasLocalData = EVENTS.some(e => e.csvSlots.some(s => getEventData(s.id)));
+    const hasLocalData = allSlots(CURRENT_YEAR).some(({ slot }) => safeGet('data_' + slot.id));
     // ローカルにデータが無い、または公開データの方が新しい場合のみ取り込む
     // （ローカルの未公開の編集を上書きしないための条件）
     if (!hasLocalData || (data.exportedAt && data.exportedAt > localSynced)) {

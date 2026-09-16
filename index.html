@@ -41,32 +41,14 @@
         <h2 class="section-title">申込状況サマリー</h2>
       </div>
       <div id="new-visitor-summary"></div>
-      <div class="progress-grid">
-        <div id="card-0725" class="progress-card" onclick="switchEvent('0725')">
-          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
-        </div>
-        <div id="card-0829" class="progress-card" onclick="switchEvent('0829')">
-          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
-        </div>
-        <div id="card-1107" class="progress-card" onclick="switchEvent('1107')">
-          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
-        </div>
-        <div id="card-1128" class="progress-card" onclick="switchEvent('1128')">
-          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
-        </div>
-      </div>
+      <div class="progress-grid" id="progress-grid"></div>
     </section>
 
     <!-- Section 2: Event Detail Tabs -->
     <section class="event-tab-section">
 
       <!-- Desktop tabs -->
-      <div id="event-tab-nav" class="tab-nav event-tab-nav-desktop">
-        <button class="tab-btn event-tab-btn active" data-key="0725" onclick="switchEvent('0725')">7月25日</button>
-        <button class="tab-btn event-tab-btn" data-key="0829" onclick="switchEvent('0829')">8月29日</button>
-        <button class="tab-btn event-tab-btn" data-key="1107" onclick="switchEvent('1107')">11月7日</button>
-        <button class="tab-btn event-tab-btn" data-key="1128" onclick="switchEvent('1128')">11月28日</button>
-      </div>
+      <div id="event-tab-nav" class="tab-nav event-tab-nav-desktop"></div>
 
       <!-- Mobile dropdown -->
       <select id="event-select-dropdown" class="event-select-dropdown"></select>

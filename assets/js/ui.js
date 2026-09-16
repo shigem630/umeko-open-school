@@ -33,10 +33,75 @@ function showToast(message, type = 'success') {
 }
 
 // ===== PROGRESS CARDS =====
+// 表示中の年度のカードを用意する（年度を切り替えたら作り直す）
+function _ensureProgressCards() {
+  const grid = document.getElementById('progress-grid');
+  if (!grid || grid.dataset.year === String(ACTIVE_YEAR)) return;
+  const click = window.IS_TEACHER ? 'handleCardClick' : 'switchEvent';
+  grid.innerHTML = EVENTS.map(e => `
+    <div id="card-${e.key}" class="progress-card" onclick="${click}('${e.key}')">
+      <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
+    </div>`).join('');
+  grid.dataset.year = String(ACTIVE_YEAR);
+}
+
+// 過去の年度のカード：目標・ペースは出さず、申込数と来場数を表示
+function _pastProgressCardHTML(event, rows) {
+  const est = YEAR_META[ACTIVE_YEAR] && YEAR_META[ACTIVE_YEAR].datesEstimated;
+  const header = `
+    <div class="progress-card-header">
+      <div>
+        <div class="progress-event-date">${escapeHtml(event.label)}${est ? '<span class="progress-est">推定</span>' : ''}</div>
+        <div class="progress-event-name">${escapeHtml(event.fullLabel.replace(/（[^）]*）$/, ''))}</div>
+      </div>
+    </div>`;
+  if (!rows.length) {
+    return `${header}
+      <div class="progress-empty">
+        <div class="progress-empty-icon">📋</div>
+        <div class="progress-empty-text">データ未読込</div>
+      </div>`;
+  }
+  const attended = rows.filter(r => r.attended === '来場済み').length;
+  const hasAttendance = rows.some(r => r.attended);
+  const music = event.combined ? getMusicRows(event.key) : [];
+  const vs = event.musicOnly ? { available: false } : getVisitorStats(event.key);
+  const importInfo = getEventImportInfo(event.key);
+  return `${header}
+    <div class="progress-numbers">
+      <span class="progress-current">${rows.length}</span>
+      <span class="progress-unit">人 申込</span>
+    </div>
+    ${event.combined ? `
+      <div class="progress-breakdown">
+        <span class="breakdown-jhs">中学生 ${rows.filter(r => r._slot === 'jhs').length}人</span>
+        <span class="breakdown-sep">・</span>
+        <span class="breakdown-elm">小学生 ${rows.filter(r => r._slot === 'elm').length}人</span>
+        ${music.length ? `<span class="breakdown-sep">・</span><span class="breakdown-music">音楽科 ${music.length}人</span>` : ''}
+      </div>` : ''}
+    ${vs.available ? `
+      <div class="progress-visitor-row">
+        <span class="visitor-new-badge">🆕 新規 ${vs.newCount}人</span>
+        <span class="visitor-sep">・</span>
+        <span class="visitor-return-badge">🔁 再訪 ${vs.returningCount}人</span>
+      </div>` : ''}
+    ${hasAttendance ? `<div class="progress-rate">来場 <strong>${attended}人</strong>（来場率 ${Math.round(attended * 100 / rows.length)}%）</div>` : ''}
+    <div class="progress-updated">${importInfo ? `読込: ${formatDatetimeDisplay(importInfo.latest_at)}` : ''}</div>`;
+}
+
 function renderProgressCards(role) {
   const config = getConfig();
+  _ensureProgressCards();
   EVENTS.forEach(event => {
     const rows = getEventRows(event.key);
+    if (isPastYear()) {
+      const pastCard = document.getElementById('card-' + event.key);
+      if (pastCard) {
+        pastCard.className = 'progress-card past-year';
+        pastCard.innerHTML = _pastProgressCardHTML(event, rows);
+      }
+      return;
+    }
     const goal = config.goals[event.key] || event.defaultGoal;
     const total = rows.length;
     const pct = goal > 0 ? Math.min(100, Math.round(total * 100 / goal)) : 0;
@@ -148,6 +213,18 @@ function renderNewVisitorSummary() {
   const hasAnyData = EVENTS.some(e => getEventRows(e.key).length > 0);
   if (!hasAnyData) { el.innerHTML = ''; return; }
 
+  if (isPastYear()) {
+    el.innerHTML = available ? `
+      <div class="new-visitor-summary-card card">
+        <div class="nv-summary-inner">
+          <div class="nv-summary-label">🎯 新規来校者 累計（${ACTIVE_YEAR}年度）</div>
+          <div class="nv-summary-numbers"><span class="nv-current">${count}</span><span class="nv-unit">人</span></div>
+          <div class="nv-past-note">年度内で初めて申し込んだ人数（複数回の申込は1人として集計）</div>
+        </div>
+      </div>` : '';
+    return;
+  }
+
   const pct = goal > 0 ? Math.min(100, Math.round(count * 100 / goal)) : 0;
   const achieved = count >= goal;
 
@@ -176,21 +253,31 @@ function renderNewVisitorSummary() {
 
 // ===== EVENT TABS =====
 let currentEventKey = EVENTS[0].key;
+let _phaseTabsReady = false;
 
+// 回のタブ（表示中の年度の回から作る。年度を切り替えたら呼び直す）
 function initEventTabs() {
   const tabNav  = document.getElementById('event-tab-nav');
   const dropdown = document.getElementById('event-select-dropdown');
   if (!tabNav && !dropdown) return;
 
+  if (tabNav) {
+    tabNav.innerHTML = EVENTS.map(e =>
+      `<button class="tab-btn event-tab-btn" data-key="${e.key}" onclick="switchEvent('${e.key}')">${escapeHtml(e.label)}</button>`
+    ).join('');
+  }
   if (dropdown) {
     dropdown.innerHTML = EVENTS.map(e =>
-      `<option value="${e.key}">${e.fullLabel}</option>`
+      `<option value="${e.key}">${escapeHtml(e.fullLabel)}</option>`
     ).join('');
-    dropdown.addEventListener('change', () => switchEvent(dropdown.value));
+    if (!dropdown.dataset.bound) {
+      dropdown.addEventListener('change', () => switchEvent(dropdown.value));
+      dropdown.dataset.bound = '1';
+    }
   }
 
-  // Phase 7-5: init phase tabs ONCE here (not in renderEventPanel)
-  initPhaseTabs();
+  // Phase 7-5: init phase tabs ONCE (not in renderEventPanel)
+  if (!_phaseTabsReady) { initPhaseTabs(); _phaseTabsReady = true; }
 
   switchEvent(EVENTS[0].key);
 }
@@ -380,12 +467,12 @@ function buildBeforePanelHTML(key, rows = []) {
     <div class="card breakdown-card">
       <div class="breakdown-stat-row">
         <div class="breakdown-stat">
-          <div class="breakdown-stat-label">中学生（午前）</div>
+          <div class="breakdown-stat-label">${escapeHtml(event.jhsLabel || '中学生（午前）')}</div>
           <div class="breakdown-stat-count">${jhsCount}<span class="breakdown-unit">人</span></div>
         </div>
         <div class="breakdown-stat-op">＋</div>
         <div class="breakdown-stat">
-          <div class="breakdown-stat-label">小学生（午後）</div>
+          <div class="breakdown-stat-label">${escapeHtml(event.elmLabel || '小学生（午後）')}</div>
           <div class="breakdown-stat-count">${elmCount}<span class="breakdown-unit">人</span></div>
         </div>
         ${music ? `
@@ -405,13 +492,14 @@ function buildBeforePanelHTML(key, rows = []) {
       ${visitorRow}
       ${headcountRow}
       ${uniformRow}${consultRow}
-      ${music ? buildMusicDetailsHTML(music) : ''}
+      ${music ? buildMusicDetailsHTML(music, event.musicLabel) : ''}
     </div>
   ` : rows.length > 0 ? `
     <div class="card breakdown-card single-event-breakdown">
       ${visitorRow}
       ${headcountRow}
       ${uniformRow}${consultRow}
+      ${event.musicOnly && getMusicSummary(key) ? buildMusicDetailsHTML(getMusicSummary(key), event.musicLabel) : ''}
     </div>
   ` : '';
 
@@ -560,7 +648,7 @@ function buildBeforePanelHTML(key, rows = []) {
 }
 
 // 音楽科体験レッスン会の内訳（内訳カードの末尾に折りたたみで表示）
-function buildMusicDetailsHTML(m) {
+function buildMusicDetailsHTML(m, label = '音楽科体験レッスン会') {
   const chips = list => list.length
     ? list.map(([name, n]) => `<span class="music-chip">${escapeHtml(name)} ${n}</span>`).join('')
     : '<span class="music-none">回答なし</span>';
@@ -571,7 +659,7 @@ function buildMusicDetailsHTML(m) {
     </div>`;
   return `
     <details class="music-details">
-      <summary>🎹 音楽科体験レッスン会の内訳（専攻・希望・中学校など）</summary>
+      <summary>🎹 ${escapeHtml(label)}の内訳（専攻・希望・中学校など）</summary>
       <div class="music-rows">
         ${m.visitorAvailable ? item('新規・再訪', `<span class="music-chip">新規 ${m.newcomers}</span><span class="music-chip">再訪 ${m.returning}</span>`) : ''}
         ${item('専攻・楽器', chips(m.majors))}
@@ -778,7 +866,7 @@ function renderSchoolTotals(type) {
 
   const label = _schoolTotalsType === 'jhs' ? '中学校' : '小学校';
   const titleEl = document.getElementById('school-totals-title');
-  if (titleEl) titleEl.textContent = `🏫 ${label}別 累計来場者数`;
+  if (titleEl) titleEl.textContent = `🏫 ${label}別 累計来場者数${window.IS_TEACHER ? `（${ACTIVE_YEAR}年度）` : ''}`;
 
   const totals = getSchoolTotals(_schoolTotalsType);
   if (!totals.length) {
@@ -888,10 +976,124 @@ function restoreUploadStates() {
   });
 }
 
+// ===== データ管理欄（表示中の年度の回から作る）=====
+const _UPLOAD_LABEL_STYLE = 'font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)';
+
+function renderUploadPanel(onUploaded) {
+  const wrap = document.getElementById('upload-event-groups');
+  if (!wrap) return;
+  const config = getConfig();
+  const past = isPastYear();
+  const zone = slot => `
+    <div>
+      <p style="${_UPLOAD_LABEL_STYLE}">${escapeHtml(slot.uploadLabel || slot.label)}</p>
+      <label class="upload-zone" data-slot="${slot.id}">
+        <input type="file" accept=".csv">
+        <div class="upload-zone-icon">${slot.type === 'music' ? '🎹' : '📄'}</div>
+        <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
+        <div class="upload-zone-hint">.csvファイル</div>
+      </label>
+    </div>`;
+  const hasFileNames = EVENTS.some(e => e.csvSlots.some(s => s.file));
+  const bulk = past && hasFileNames ? `
+    <div class="upload-event-group upload-bulk-group">
+      <div class="upload-event-header">
+        <span class="upload-event-date">${ACTIVE_YEAR}年度の申込一覧をまとめて読み込む</span>
+      </div>
+      <p class="exam-upload-desc">BLENDの「〇〇_申込一覧.csv」を複数まとめて選択（またはドラッグ）すると、ファイル名から該当する回の欄に自動で読み込みます（中学生・小学生は「中学校」「小学校」の列で判定）。今年度のファイルが混ざっていた場合は読み飛ばします。</p>
+      <label class="upload-zone exam-upload-zone" id="bulk-upload-zone">
+        <input type="file" accept=".csv" multiple>
+        <div class="upload-zone-icon">📚</div>
+        <div class="upload-zone-label">クリックまたはドラッグ&ドロップ（複数ファイル可）</div>
+        <div class="upload-zone-hint">.csvファイル</div>
+      </label>
+    </div>` : '';
+  wrap.innerHTML = (past ? `<p class="upload-year-note">📅 ${ACTIVE_YEAR}年度（過去の年度）の欄です。ここで読み込んだデータは生徒用ページには表示されず、「🚀 GitHubに公開」で入試データと一緒に暗号化して教職員に共有されます。</p>` : '')
+    + bulk
+    + EVENTS.map(ev => {
+      const n = ev.csvSlots.length;
+      const grid = n >= 3 ? ' with-music' : n === 1 ? ' single-file' : '';
+      return `
+      <div class="upload-event-group">
+        <div class="upload-event-header">
+          <span class="upload-event-date">${escapeHtml(ev.uploadTitle || ev.label)}</span>
+          ${past ? '' : `<span class="upload-event-goal" id="goal-badge-${ev.key}">目標${config.goals[ev.key] || ev.defaultGoal}人</span>`}
+        </div>
+        <div class="upload-files-grid${grid}">${ev.csvSlots.map(zone).join('')}</div>
+      </div>`;
+    }).join('');
+
+  EVENTS.forEach(event => event.csvSlots.forEach(slot => {
+    const z = wrap.querySelector(`[data-slot="${slot.id}"]`);
+    if (z) setupUploadZone(z, slot.id, event.key, onUploaded);
+  }));
+  const bulkZone = document.getElementById('bulk-upload-zone');
+  if (bulkZone) {
+    const input = bulkZone.querySelector('input[type="file"]');
+    input.addEventListener('change', () => { importYearCsvFiles(input.files, ACTIVE_YEAR, onUploaded); input.value = ''; });
+    bulkZone.addEventListener('dragover', e => { e.preventDefault(); bulkZone.classList.add('drag-over'); });
+    bulkZone.addEventListener('dragleave', () => bulkZone.classList.remove('drag-over'));
+    bulkZone.addEventListener('drop', e => { e.preventDefault(); bulkZone.classList.remove('drag-over'); importYearCsvFiles(e.dataTransfer.files, ACTIVE_YEAR, onUploaded); });
+  }
+  restoreUploadStates();
+}
+
+function _readCsvHeaders(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const buf = e.target.result;
+      const b = new Uint8Array(buf).slice(0, 3);
+      const enc = (b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF) ? 'utf-8' : 'shift-jis';
+      const text = new TextDecoder(enc, { fatal: false }).decode(buf);
+      resolve((Papa.parse(text, { header: true, preview: 1 }).meta.fields) || []);
+    };
+    reader.onerror = () => resolve([]);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// 申込一覧のCSVを、指定年度の該当する回の欄に読み込む（ファイル名と「中学校／小学校」の列、音楽科の列で判定）
+// 戻り値: { ok: true, event, slot, count } / { ok: false, reason: 'nomatch'|'current'|'error', message }
+async function importOsCsvToYear(file, year, headers) {
+  const name = normEventFileName(file.name.replace(/\.csv$/i, '').replace(/\s*\(\d+\)\s*$/, '').replace(/_申込一覧.*$/, ''));
+  const hdr = headers || await _readCsvHeaders(file);
+  const type = hdr.some(h => h.startsWith('専攻') || h.includes('楽器名')) ? 'music' : hdr.includes('小学校') ? 'elm' : 'jhs';
+  const cands = allSlots(year).filter(({ slot }) => slot.file && normEventFileName(slot.file) === name);
+  const hit = cands.find(({ slot }) => slot.type === type);
+  if (!hit) return { ok: false, reason: 'nomatch' };
+  const data = await new Promise(resolve => parseCSVFile(file, hit.slot.id, d => resolve(d), msg => resolve({ error: msg })));
+  if (data.error) return { ok: false, reason: 'error', message: data.error };
+  // 今年度のファイル（BLEND管理番号が今年度のデータと一致）は過去の年度に入れない
+  const currentIds = new Set(allSlots(CURRENT_YEAR).flatMap(({ slot }) => ((safeGet('data_' + slot.id) || {}).rows || []).map(r => String(r.blend_id || ''))).filter(Boolean));
+  if (data.rows.some(r => r.blend_id && currentIds.has(String(r.blend_id)))) return { ok: false, reason: 'current' };
+  if (!saveEventData(hit.slot.id, data)) return { ok: false, reason: 'error', message: '保存に失敗しました' };
+  return { ok: true, event: hit.event, slot: hit.slot, count: data.count };
+}
+
+async function importYearCsvFiles(fileList, year, onUploaded) {
+  if (!requireAdmin()) return;
+  const files = [...fileList].filter(f => f.name.toLowerCase().endsWith('.csv'));
+  if (!files.length) { showToast('CSVファイル（.csv）を選択してください。', 'error'); return; }
+  const done = [], skipped = [];
+  for (const file of files) {
+    const res = await importOsCsvToYear(file, year);
+    if (res.ok) done.push(`${res.event.label}・${res.slot.label}`);
+    else skipped.push(`${file.name}（${res.reason === 'nomatch' ? '該当する回なし' : res.reason === 'current' ? '今年度のファイル' : res.message}）`);
+  }
+  if (done.length) {
+    showToast(`${year}年度の申込一覧を${done.length}件読み込みました。${skipped.length ? ` 読み飛ばし：${skipped.join('、')}` : ''}`, skipped.length ? 'warning' : 'success');
+    onUploaded && onUploaded(EVENTS[0].key);
+    restoreUploadStates();
+  } else {
+    showToast(`読み込めるファイルがありませんでした。${skipped.join('、')}`, 'error');
+  }
+}
+
 // ===== SETTINGS =====
 function renderSettingsPanel() {
   const config = getConfig();
-  EVENTS.forEach(event => {
+  EVENTS_BY_YEAR[CURRENT_YEAR].forEach(event => {
     const input = document.getElementById(`goal-${event.key}`);
     if (input) input.value = config.goals[event.key] || event.defaultGoal;
   });
@@ -902,7 +1104,7 @@ function renderSettingsPanel() {
 function saveGoals() {
   if (!requireAdmin()) return;
   const config = getConfig();
-  EVENTS.forEach(event => {
+  EVENTS_BY_YEAR[CURRENT_YEAR].forEach(event => {
     const input = document.getElementById(`goal-${event.key}`);
     if (input) {
       const val = parseInt(input.value, 10);

@@ -69,28 +69,17 @@
       ⚠️ <strong>ご注意：</strong>このページはJavaScriptによる簡易認証です。個人情報（氏名・住所・電話・メール）はこの画面には表示されず、ブレンドの管理画面が唯一の正式な管理場所です。教員用URLは口頭・メール等で限定的に共有してください。
     </div>
 
+    <!-- 表示年度の切り替え -->
+    <div id="year-switch" class="year-switch"></div>
+
     <!-- Section 1: Progress Cards -->
     <section>
       <div class="section-header">
-        <h2 class="section-title">申込状況サマリー</h2>
+        <h2 class="section-title" id="summary-title">申込状況サマリー</h2>
         <button class="btn btn-ghost btn-sm" onclick="renderProgressCards()">🔄 更新</button>
       </div>
       <div id="new-visitor-summary"></div>
-      <div class="progress-grid">
-        <!-- Phase 6-4: empty cards scroll to upload panel -->
-        <div id="card-0725" class="progress-card" onclick="handleCardClick('0725')">
-          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">CSVを読み込んでください</div></div>
-        </div>
-        <div id="card-0829" class="progress-card" onclick="handleCardClick('0829')">
-          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">CSVを読み込んでください</div></div>
-        </div>
-        <div id="card-1107" class="progress-card" onclick="handleCardClick('1107')">
-          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">CSVを読み込んでください</div></div>
-        </div>
-        <div id="card-1128" class="progress-card" onclick="handleCardClick('1128')">
-          <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">CSVを読み込んでください</div></div>
-        </div>
-      </div>
+      <div class="progress-grid" id="progress-grid"></div>
     </section>
 
     <!-- Section 2: CSV Upload -->
@@ -102,117 +91,7 @@
         ブレンドの管理画面からCSVをダウンロードし、各イベントのスロットにアップロードしてください。個人情報はこの端末のブラウザには保存されません。
       </p>
 
-      <!-- 7/25 -->
-      <div class="upload-event-group">
-        <div class="upload-event-header">
-          <span class="upload-event-date">7月25日（第1回）</span>
-          <span class="upload-event-goal" id="goal-badge-0725">目標100人</span>
-        </div>
-        <div class="upload-files-grid with-music">
-          <div>
-            <p style="font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)">中学生CSV（午前・高校受験）</p>
-            <label class="upload-zone" data-slot="0725_jhs">
-              <input type="file" accept=".csv">
-              <div class="upload-zone-icon">📄</div>
-              <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
-              <div class="upload-zone-hint">.csvファイル</div>
-            </label>
-          </div>
-          <div>
-            <p style="font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)">小学生CSV（午後・中学受験）</p>
-            <label class="upload-zone" data-slot="0725_elm">
-              <input type="file" accept=".csv">
-              <div class="upload-zone-icon">📄</div>
-              <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
-              <div class="upload-zone-hint">.csvファイル</div>
-            </label>
-          </div>
-          <div>
-            <p style="font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)">音楽科CSV（体験レッスン会）</p>
-            <label class="upload-zone" data-slot="0725_music">
-              <input type="file" accept=".csv">
-              <div class="upload-zone-icon">🎹</div>
-              <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
-              <div class="upload-zone-hint">.csvファイル</div>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- 8/29 -->
-      <div class="upload-event-group">
-        <div class="upload-event-header">
-          <span class="upload-event-date">8月29日（第2回）</span>
-          <span class="upload-event-goal" id="goal-badge-0829">目標100人</span>
-        </div>
-        <div class="upload-files-grid with-music">
-          <div>
-            <p style="font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)">中学生CSV（午前・高校受験）</p>
-            <label class="upload-zone" data-slot="0829_jhs">
-              <input type="file" accept=".csv">
-              <div class="upload-zone-icon">📄</div>
-              <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
-              <div class="upload-zone-hint">.csvファイル</div>
-            </label>
-          </div>
-          <div>
-            <p style="font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)">小学生CSV（午後・中学受験）</p>
-            <label class="upload-zone" data-slot="0829_elm">
-              <input type="file" accept=".csv">
-              <div class="upload-zone-icon">📄</div>
-              <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
-              <div class="upload-zone-hint">.csvファイル</div>
-            </label>
-          </div>
-          <div>
-            <p style="font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)">音楽科CSV（体験レッスン会）</p>
-            <label class="upload-zone" data-slot="0829_music">
-              <input type="file" accept=".csv">
-              <div class="upload-zone-icon">🎹</div>
-              <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
-              <div class="upload-zone-hint">.csvファイル</div>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- 11/7 -->
-      <div class="upload-event-group">
-        <div class="upload-event-header">
-          <span class="upload-event-date">11月7日（第3回・小学生のみ）</span>
-          <span class="upload-event-goal" id="goal-badge-1107">目標60人</span>
-        </div>
-        <div class="upload-files-grid single-file">
-          <div>
-            <p style="font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)">小学生CSV</p>
-            <label class="upload-zone" data-slot="1107_elm">
-              <input type="file" accept=".csv">
-              <div class="upload-zone-icon">📄</div>
-              <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
-              <div class="upload-zone-hint">.csvファイル</div>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- 11/28 -->
-      <div class="upload-event-group">
-        <div class="upload-event-header">
-          <span class="upload-event-date">11月28日（第4回・中学生のみ）</span>
-          <span class="upload-event-goal" id="goal-badge-1128">目標60人</span>
-        </div>
-        <div class="upload-files-grid single-file">
-          <div>
-            <p style="font-size:var(--text-xs);font-weight:600;color:var(--color-gray-700);margin-bottom:var(--space-2)">中学生CSV</p>
-            <label class="upload-zone" data-slot="1128_jhs">
-              <input type="file" accept=".csv">
-              <div class="upload-zone-icon">📄</div>
-              <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
-              <div class="upload-zone-hint">.csvファイル</div>
-            </label>
-          </div>
-        </div>
-      </div>
+      <div id="upload-event-groups"></div>
 
       <!-- 入試データ（教員のみ・公開しない） -->
       <div class="upload-event-group exam-upload-group">
@@ -224,7 +103,7 @@
         <ul class="exam-upload-list">
           <li>「〇〇選抜_受験者一覧.csv」（入試区分ごと・すべて）</li>
           <li>「合格者一覧.csv」（高校入試・中学入試それぞれ）</li>
-          <li>前年度のオープンスクール・説明会・体験会の「〇〇_申込一覧.csv」（来場から受験までの照合に使います）</li>
+          <li>前年度のオープンスクール・説明会・体験会の「〇〇_申込一覧.csv」（来場から受験までの照合に使います。年度の設定がある年度は、その年度の各回の欄にも読み込まれ、表示年度の切り替えで見られます）</li>
         </ul>
         <div class="exam-year-select">
           <label for="exam-os-year">申込一覧（過去のオープンスクール）の実施年度</label>
@@ -243,12 +122,7 @@
 
     <!-- Section 3: Event Detail Tabs -->
     <section class="event-tab-section">
-      <div id="event-tab-nav" class="tab-nav event-tab-nav-desktop">
-        <button class="tab-btn event-tab-btn active" data-key="0725" onclick="switchEvent('0725')">7月25日</button>
-        <button class="tab-btn event-tab-btn" data-key="0829" onclick="switchEvent('0829')">8月29日</button>
-        <button class="tab-btn event-tab-btn" data-key="1107" onclick="switchEvent('1107')">11月7日</button>
-        <button class="tab-btn event-tab-btn" data-key="1128" onclick="switchEvent('1128')">11月28日</button>
-      </div>
+      <div id="event-tab-nav" class="tab-nav event-tab-nav-desktop"></div>
       <select id="event-select-dropdown" class="event-select-dropdown"></select>
 
       <div class="phase-tab-nav">
@@ -454,6 +328,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 共有された入試データ（暗号化）を復号。管理者PCで入試CSVを読み込んでいる場合はそちらを優先
   await loadSharedExamRecords();
 
+  // 表示年度（同じタブ内では前回の選択を引き継ぐ）
+  let savedYear = null;
+  try { savedYear = parseInt(sessionStorage.getItem('umeko_year'), 10); } catch (_) {}
+  if (savedYear && EVENTS_BY_YEAR[savedYear]) setActiveYear(savedYear);
+  syncExamViewToYear(ACTIVE_YEAR);
+  renderYearSwitch();
+
   // 以降の読込・設定・公開の準備は管理者のみ
   if (!window.IS_ADMIN) {
     renderProgressCards();
@@ -464,22 +345,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Setup upload zones
-  EVENTS.forEach(event => {
-    event.csvSlots.forEach(slot => {
-      const zoneEl = document.querySelector(`[data-slot="${slot.id}"]`);
-      if (zoneEl) {
-        setupUploadZone(zoneEl, slot.id, event.key, (key) => {
-          renderProgressCards();
-          renderEventPanel(key);
-          updateGoalBadges();
-        });
-      }
-    });
-  });
-
-  // Restore previously uploaded states
-  restoreUploadStates();
+  // データ管理欄（表示中の年度の回から作る）
+  renderUploadPanel(onSlotUploaded);
 
   // Render
   renderProgressCards();
@@ -493,9 +360,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPublishUI();
 });
 
+// CSVを読み込んだあとの再表示
+function onSlotUploaded(key) {
+  renderProgressCards();
+  renderEventPanel(key && EVENTS.some(e => e.key === key) ? key : currentEventKey);
+  updateGoalBadges();
+  renderSchoolTotals();
+  renderSchoolMap();
+  renderExamSection();
+}
+
+// ===== 表示年度の切り替え =====
+function renderYearSwitch() {
+  const el = document.getElementById('year-switch');
+  if (!el) return;
+  const years = Object.keys(EVENTS_BY_YEAR).map(Number).sort((a, b) => b - a);
+  const past = isPastYear();
+  const est = YEAR_META[ACTIVE_YEAR] && YEAR_META[ACTIVE_YEAR].datesEstimated;
+  el.classList.toggle('is-past', past);
+  el.innerHTML = `
+    <span class="year-switch-label">表示年度</span>
+    ${years.map(y => `<button class="year-btn${y === ACTIVE_YEAR ? ' active' : ''}" onclick="switchYear(${y})">${y}年度${y === CURRENT_YEAR ? '（今年度）' : ''}</button>`).join('')}
+    ${past ? `<span class="year-switch-note">過去の年度を表示しています（申込状況・回ごとのグラフ・学校別・地図）。目標人数とペースは表示しません。${est ? '開催日はBLENDの申込締切から推定しています。' : ''}</span>` : ''}`;
+  const title = document.getElementById('summary-title');
+  if (title) title.textContent = `申込状況サマリー（${ACTIVE_YEAR}年度）`;
+}
+
+function switchYear(year) {
+  if (year === ACTIVE_YEAR || !setActiveYear(year)) return;
+  try { sessionStorage.setItem('umeko_year', String(year)); } catch (_) {}
+  renderYearSwitch();
+  if (window.IS_ADMIN) renderUploadPanel(onSlotUploaded);
+  renderProgressCards();
+  initEventTabs();
+  renderSchoolTotals();
+  renderSchoolMap();
+  syncExamViewToYear(year);
+  renderExamSection();
+}
+
 function updateGoalBadges() {
   const config = getConfig();
-  EVENTS.forEach(e => {
+  EVENTS_BY_YEAR[CURRENT_YEAR].forEach(e => {
     const badge = document.getElementById(`goal-badge-${e.key}`);
     if (badge) badge.textContent = `目標${config.goals[e.key] || e.defaultGoal}人`;
   });

@@ -4,6 +4,12 @@ const STORAGE_PREFIX = 'umeko_os_';
 // Null on teacher page, so all functions below behave normally there.
 let _publishedCache = null;
 
+// 過去の年度のデータ（教職員向けに暗号化して共有されたもの）。復号後にメモリ上だけに置く
+let _sharedSlotData = null;
+function setSharedSlotData(slots) {
+  _sharedSlotData = slots || null;
+}
+
 function setPublishedCache(data) {
   _publishedCache = data || null;
 }
@@ -43,7 +49,7 @@ function safeRemove(key) {
 function getConfig() {
   const stored = safeGet('config');
   const base = stored || {
-    goals: Object.fromEntries(EVENTS.map(e => [e.key, e.defaultGoal])),
+    goals: Object.fromEntries(EVENTS_BY_YEAR[CURRENT_YEAR].map(e => [e.key, e.defaultGoal])),
     newVisitorGoal: 320,
     password_hash: DEFAULT_PASSWORD_HASH,
     version: APP_VERSION
@@ -71,7 +77,7 @@ function getEventData(slotId) {
   if (_publishedCache && _publishedCache.slots && _publishedCache.slots[slotId]) {
     return _publishedCache.slots[slotId];
   }
-  return safeGet('data_' + slotId);
+  return safeGet('data_' + slotId) || (_sharedSlotData && _sharedSlotData[slotId]) || null;
 }
 
 function saveEventData(slotId, data) {
@@ -104,11 +110,7 @@ function saveApprovedComments(map) {
 
 // Phase 7-6: use safeRemove for consistent prefix handling
 function clearAllData() {
-  EVENTS.forEach(event => {
-    event.csvSlots.forEach(slot => {
-      safeRemove('data_' + slot.id);
-    });
-  });
+  allSlots().forEach(({ slot }) => safeRemove('data_' + slot.id));
   safeRemove('annotations');
   safeRemove('approved_comments');
 }
@@ -116,7 +118,10 @@ function clearAllData() {
 // Get combined rows for an event (merges jhs + elm if combined)
 // _slot property is added here at read time, never stored in localStorage
 // 音楽科体験レッスン会（type: 'music'）は中学生/小学生の集計と分けるため含めない → getMusicRows()
+// 音楽科の行事だけの回（musicOnly）は、その回の画面では音楽科の申込を表示する
 function getEventRows(eventKey) {
+  const event = EVENTS.find(e => e.key === eventKey);
+  if (event && event.musicOnly) return getMusicRows(eventKey);
   return _getSlotRows(eventKey, slot => slot.type !== 'music');
 }
 

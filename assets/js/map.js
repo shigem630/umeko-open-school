@@ -75,7 +75,8 @@ function renderSchoolMap(type) {
   const analysis = _isAnalysisMap(el);
   const label = _schoolMapType === 'jhs' ? '中学校' : '小学校';
   const titleEl = document.getElementById('school-map-title');
-  if (titleEl) titleEl.textContent = analysis ? `🗺️ ${label} 浸透度マップ` : `🗺️ ${label}マップ（来場者数）`;
+  const yearTag = window.IS_TEACHER ? `（${ACTIVE_YEAR}年度）` : '';
+  if (titleEl) titleEl.textContent = analysis ? `🗺️ ${label} 浸透度マップ${yearTag}` : `🗺️ ${label}マップ（来場者数）${yearTag}`;
   const subEl = document.getElementById('school-map-subtitle');
   if (subEl) subEl.textContent = `${_schoolMapType === 'jhs' ? '中3' : '小6'}の生徒数（学校の規模）と、${_schoolMapType === 'jhs' ? '中3' : '小6'}の来場者数を学校ごとに比較（全イベント合算）`;
 
@@ -275,7 +276,8 @@ function _renderZeroList(label, areaStats) {
 function _renderPenetrationMap() {
   const p = getPenetration(_schoolMapType);
   // 入試データ（読込済み・共有済みの場合のみ）。中学校→高校入試、小学校→中学入試
-  const exam = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool(_schoolMapType === 'jhs' ? 'high' : 'junior') : null;
+  // 表示年度に来場した学年の入試結果（翌年度入試）を優先し、無ければ表示年度の入試（1学年上）を表示
+  const exam = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool(_schoolMapType === 'jhs' ? 'high' : 'junior', [ACTIVE_YEAR + 1, ACTIVE_YEAR]) : null;
   p.schools.forEach(s => { s.exam = exam ? (exam.map[s.name] || { total: 0, enrolled: 0 }) : null; });
   p.examFiscal = exam ? exam.fiscal : '';
   p.examHasPasses = !!(exam && exam.hasPasses);
@@ -327,7 +329,9 @@ function _renderPenetrationMap() {
   const cap = document.getElementById('school-map-caption');
   if (cap) {
     const listNote = p.type === 'jhs' ? '営業リストと北九州市（門司区・小倉北区・小倉南区）' : '営業リスト（下関市・山陽小野田市・門司区）';
-    cap.textContent = `${listNote}の${p.schools.length}校（うち${p.gradeLabel}生徒数の登録 ${p.sizedCount}校）を表示。来場者は${p.gradeLabel}のみ数えています。`
+    const sizeYearNote = ACTIVE_YEAR === CURRENT_YEAR ? ''
+      : p.type === 'elm' ? `生徒数は${ACTIVE_YEAR}年度の数値（無い学校は${CURRENT_YEAR}年度の数値）です。` : `生徒数は${CURRENT_YEAR}年度の数値です（${ACTIVE_YEAR}年度の数値が無いため）。`;
+    cap.textContent = `${listNote}の${p.schools.length}校（うち${p.gradeLabel}生徒数の登録 ${p.sizedCount}校）を表示。来場者は${p.gradeLabel}のみ数えています。${sizeYearNote}`
       + `地図を拡大すると学校名が表示されます（丸にカーソルを合わせても確認できます）。クリックで詳細を表示します。点線は市・区の境界です。`
       + (outsidePlaced ? `点線の丸は一覧外の学校からの来場 ${outsidePlaced}校です。` : '');
   }
@@ -346,7 +350,7 @@ function _addCountLabel(pos, n, onDark) {
 }
 
 function _examFiscalShort() {
-  const ex = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool(_schoolMapType === 'jhs' ? 'high' : 'junior') : null;
+  const ex = typeof getExamCountsBySchool === 'function' ? getExamCountsBySchool(_schoolMapType === 'jhs' ? 'high' : 'junior', [ACTIVE_YEAR + 1, ACTIVE_YEAR]) : null;
   return ex && ex.fiscal ? ex.fiscal : '入試';
 }
 
@@ -436,7 +440,7 @@ function _renderGapLists(p) {
   };
   const table = (list, empty) => list.length ? `
     <div class="gap-table-wrap"><table class="gap-table">
-      <thead><tr><th>学校</th><th>${p.gradeLabel}生徒数</th><th>来場（${p.gradeLabel}）</th><th>平均並みの人数</th><th>平均との差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数${p.examHasPasses ? '／入学者数' : ''}">${escapeHtml(p.examFiscal)} ${p.examHasPasses ? '受験／入学' : '受験'}</th>` : ''}</tr></thead>
+      <thead><tr><th>学校</th><th>${p.gradeLabel}生徒数</th><th>来場（${p.gradeLabel}）</th><th>平均並みの人数</th><th>平均との差</th>${hasExam ? `<th title="${escapeHtml(p.examFiscal)}の受験者数${p.examHasPasses ? '／入学者数' : ''}">${p.examHasPasses ? '受験／入学' : '受験'}<br><small class="gap-th-sub">${escapeHtml(p.examFiscal)}</small></th>` : ''}</tr></thead>
       <tbody>${list.slice(0, 10).map(row).join('')}</tbody>
     </table></div>` : `<p class="gap-empty">${empty}</p>`;
 

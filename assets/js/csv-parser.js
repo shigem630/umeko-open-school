@@ -1,7 +1,7 @@
 function parseCSVFile(file, slotId, onSuccess, onError) {
   // Phase 7-1: derive event year from EVENTS config so date parsing survives year-boundary uploads
-  const event = EVENTS.find(e => e.csvSlots.some(s => s.id === slotId));
-  const eventYear = event ? new Date(event.date).getFullYear() : new Date().getFullYear();
+  const found = findEventBySlot(slotId);
+  const eventYear = found ? new Date(found.event.date).getFullYear() : new Date().getFullYear();
 
   const reader = new FileReader();
 

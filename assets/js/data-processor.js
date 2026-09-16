@@ -20,13 +20,27 @@ function getCumulativeCounts(rows) {
   });
 }
 
+// 学校名の表記ゆれをそろえる（空白を除き、「勝山中」「勝山小」のような略称は「勝山中学校」「勝山小学校」にする）
+// 2025年度の申込一覧は学校名が自由記入で、略称と正式名が混在しているため
+// BLENDの動作確認用の登録（学校名が「梅光（デモ）」「テスト小学校」など）
+function isTestSchoolName(name) {
+  return /デモ|テスト/.test(String(name || ''));
+}
+
+function canonicalSchoolName(name) {
+  let n = String(name || '').replace(/[\s　]/g, '');
+  if (/[^学][中小]$/.test(n)) n += '学校';
+  return n;
+}
+
 // Returns { [value]: count } for a given field
 function countByField(rows, field) {
   const counts = {};
   for (const row of rows) {
     const raw = row[field];
     if (!raw) continue;
-    const val = field === 'channel' ? (CHANNEL_ALIASES[raw] || raw) : raw;
+    if (field === 'school' && isTestSchoolName(raw)) continue;
+    const val = field === 'channel' ? (CHANNEL_ALIASES[raw] || raw) : field === 'school' ? canonicalSchoolName(raw) : raw;
     counts[val] = (counts[val] || 0) + 1;
   }
   return sortObjectByValue(counts);
@@ -70,8 +84,8 @@ function _schoolAttendance(type, grade) {
       if (!data || !data.rows) continue;
       const hasAttendance = data.rows.some(r => r.attended);
       for (const r of data.rows) {
-        const school = (r.school || '').trim();
-        if (!school) continue;
+        const school = canonicalSchoolName(r.school);
+        if (!school || isTestSchoolName(school)) continue;
         if (grade && r.grade && r.grade !== grade) continue;
         if (hasAttendance && r.attended !== '来場済み') {
           if (past) cancels[school] = (cancels[school] || 0) + 1;
@@ -109,13 +123,13 @@ const _SCHOOL_NAME_ALIASES = {
   '玖珂中学校':            '岩国市立玖珂中学校',
 };
 function _normSchoolName(name) {
-  const n = String(name || '').replace(/[\s　]/g, '');
+  const n = canonicalSchoolName(name);
   return _SCHOOL_NAME_ALIASES[n] || n;
 }
 
 const PENETRATION_TYPES = {
   jhs: { unit: '中学校', gradeLabel: '中3', grade: '3年生', master: () => (typeof SCHOOLS_MASTER_JHS !== 'undefined' ? SCHOOLS_MASTER_JHS : []).concat(typeof SCHOOLS_MASTER_KK !== 'undefined' ? SCHOOLS_MASTER_KK : []), size: m => m.g3 },
-  elm: { unit: '小学校', gradeLabel: '小6', grade: '6年生', master: () => (typeof SCHOOLS_MASTER_ELM !== 'undefined' ? SCHOOLS_MASTER_ELM : []), size: m => m.g6 },
+  elm: { unit: '小学校', gradeLabel: '小6', grade: '6年生', master: () => (typeof SCHOOLS_MASTER_ELM !== 'undefined' ? SCHOOLS_MASTER_ELM : []), size: m => m[`g6_${ACTIVE_YEAR}`] || m.g6 },
 };
 
 function hasPenetrationMaster(type) {
@@ -363,6 +377,7 @@ function getCumulativeNewVisitors() {
   const allIds = new Set();
   let count = 0;
   for (const event of EVENTS) {
+    if (event.musicOnly) continue;  // 音楽科の行事は新規来校者の集計に含めない（今年度の扱いと同じ）
     const eventIds = new Set();
     getEventRows(event.key).forEach(r => {
       if (!r.plusseed_id || eventIds.has(r.plusseed_id)) return;
