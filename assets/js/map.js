@@ -6,7 +6,9 @@
 
 let _schoolMap = null;
 let _schoolMapLayer = null;
+let _schoolLabelLayer = null;  // 学校名ラベル（拡大時のみ表示）
 let _schoolMapType = 'jhs';
+const LABEL_MIN_ZOOM = 12;     // この拡大率以上で学校名を表示
 
 // 浸透度の区分ごとの見た目（凡例と共通）
 const PENETRATION_LEVELS = {
@@ -30,8 +32,9 @@ function _inRegion([lat, lng]) {
 
 // 表示範囲の切替。bounds: [[南, 西], [北, 東]]（null=表示中の学校すべてが入る範囲）
 const MAP_AREAS = [
-  { key: 'west',   label: '下関・山陽小野田', bounds: [[33.92, 130.86], [34.32, 131.22]] },
+  { key: 'west',   label: '下関市全域',       bounds: [[33.92, 130.78], [34.32, 131.10]] },
   { key: 'city',   label: '下関市中心部',     bounds: [[33.925, 130.88], [34.045, 131.02]] },
+  { key: 'sanyo',  label: '山陽小野田市',     bounds: [[33.93, 131.08], [34.10, 131.28]] },
   { key: 'kk',     label: '門司区・小倉',     bounds: [[33.77, 130.83], [33.97, 131.02]] },
   { key: 'all',    label: '全域',             bounds: [[33.77, 130.80], [34.42, 132.20]] },
 ];
@@ -88,15 +91,64 @@ function renderSchoolMap(type) {
       maxZoom: 15,
       attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>'
     }).addTo(_schoolMap);
+    _addCityBoundaries();
+    _schoolMap.createPane('schoolLabelPane').style.zIndex = 640;  // 学校名は丸より手前に表示
+    _schoolMap.on('zoomend', _updateSchoolLabels);
   }
   if (_schoolMapLayer) _schoolMap.removeLayer(_schoolMapLayer);
+  if (_schoolLabelLayer) _schoolMap.removeLayer(_schoolLabelLayer);
   _schoolMapLayer = L.layerGroup().addTo(_schoolMap);
+  _schoolLabelLayer = L.layerGroup();
 
   if (analysis) _renderPenetrationMap();
   else _renderVisitedMap(label);
 
+  _updateSchoolLabels();
+
   // セクションが後から表示された場合に地図サイズを再計算
   setTimeout(() => { if (_schoolMap) _schoolMap.invalidateSize(); }, 200);
+}
+
+// 市区の境界線と市区名（下関市と山陽小野田市などの区切りを分かりやすくする）
+function _addCityBoundaries() {
+  if (typeof CITY_BOUNDARIES === 'undefined') return;
+  const pane = _schoolMap.createPane('cityPane');
+  pane.style.zIndex = 350;  // 地図の上・学校の丸の下
+  pane.style.pointerEvents = 'none';
+  CITY_BOUNDARIES.forEach(c => {
+    L.polygon(c.rings, { pane: 'cityPane', color: '#4A4A6A', weight: 1.6, opacity: 0.75, dashArray: '6 4', fill: false, interactive: false })
+      .addTo(_schoolMap);
+    // 最も大きい輪郭の中心付近に市区名
+    const main = c.rings.reduce((a, b) => (b.length > a.length ? b : a));
+    const center = L.polygon(main).getBounds().getCenter();
+    L.marker(center, {
+      pane: 'cityPane', interactive: false,
+      icon: L.divIcon({ className: 'city-name-label', html: `<span>${escapeHtml(c.name)}</span>`, iconSize: [0, 0] })
+    }).addTo(_schoolMap);
+  });
+}
+
+// 学校名ラベル（丸の下）。拡大したときだけ表示する
+function _addSchoolLabel(pos, name, offsetPx) {
+  L.marker(pos, {
+    interactive: false, keyboard: false, pane: 'schoolLabelPane',
+    icon: L.divIcon({ className: 'school-name-label', html: `<span style="top:${Math.round(offsetPx)}px">${escapeHtml(_labelSchoolName(name))}</span>`, iconSize: [0, 0] })
+  }).addTo(_schoolLabelLayer);
+}
+
+function _labelSchoolName(name) {
+  return _shortSchoolName(name)
+    .replace(/^うつい小中学校/, '')
+    .replace(/高等学校附属中学校$/, '高附属中')
+    .replace(/中等教育学校$/, '中等')
+    .replace(/中学校/g, '中').replace(/小学校/g, '小');
+}
+
+function _updateSchoolLabels() {
+  if (!_schoolMap || !_schoolLabelLayer) return;
+  const show = _schoolMap.getZoom() >= LABEL_MIN_ZOOM;
+  if (show && !_schoolMap.hasLayer(_schoolLabelLayer)) _schoolLabelLayer.addTo(_schoolMap);
+  if (!show && _schoolMap.hasLayer(_schoolLabelLayer)) _schoolMap.removeLayer(_schoolLabelLayer);
 }
 
 // ---- 来場者数マップ（生徒ページ・小学校）----
@@ -106,10 +158,10 @@ function _schoolKey(name) {
   return n.replace(/ヶ/g, 'ケ');
 }
 
-function _visitMarker(pos, n, ratio, name, popupHtml, zero) {
-  const size = zero ? 24 : 26 + Math.round(ratio * 24); // 来場あり 26〜50px
+function _visitMarker(pos, n, ratio, name, popupHtml, zero, ref) {
+  const size = zero ? (ref ? 20 : 24) : 26 + Math.round(ratio * 24); // 来場あり 26〜50px
   const html = zero
-    ? `<div class="school-marker-inner zero" style="width:${size}px;height:${size}px">0</div>`
+    ? `<div class="school-marker-inner ${ref ? 'ref' : 'zero'}" style="width:${size}px;height:${size}px">0</div>`
     : `<div class="school-marker-inner" style="width:${size}px;height:${size}px;background:${_mapMarkerColor(_schoolMapType, ratio)}">${n}</div>`;
   L.marker(pos, {
     icon: L.divIcon({ className: 'school-marker', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
@@ -118,6 +170,7 @@ function _visitMarker(pos, n, ratio, name, popupHtml, zero) {
     .bindTooltip(escapeHtml(_shortSchoolName(name)), { direction: 'top', offset: [0, -size / 2] })
     .bindPopup(popupHtml)
     .addTo(_schoolMapLayer);
+  _addSchoolLabel(pos, name, size / 2 + 1);
   _mapFitBounds.push(pos);
 }
 
@@ -138,28 +191,32 @@ function _renderVisitedMap(label) {
   const used = new Set();
   _mapFitBounds = [];
 
-  const popup = (name, t, areaLabel) => {
+  const popup = (name, t, areaLabel, ref) => {
     const c = cancelByKey[_schoolKey(name)] || 0;
     return `<strong>${escapeHtml(name)}</strong><br>`
       + (t ? `来場 実人数 <b>${t.students}名</b>${t.visits > t.students ? `（延べ${t.visits}）` : ''}` : '来場 <b>0名</b>')
       + (c ? `<br>キャンセル ${c}名<span class="pen-pop-note">（申込後、来場なし）</span>` : '')
-      + (!t && areaLabel ? `<br><span class="pen-pop-note">${escapeHtml(areaLabel)}の学校のうち、まだ来場のない学校です</span>` : '');
+      + (ref ? `<br><span class="pen-pop-note">中高一貫校のため、通常は来場の対象外です（参考表示）</span>`
+        : !t && areaLabel ? `<br><span class="pen-pop-note">${escapeHtml(areaLabel)}の学校のうち、まだ来場のない学校です</span>` : '');
   };
 
   // 1) 下関市・門司区の全校（来場0も表示）
   const areaSchools = (typeof SCHOOLS_AREA !== 'undefined' && SCHOOLS_AREA[_schoolMapType]) || [];
-  const areaStats = {};  // area -> { total, visited, zero: [name] }
+  const areaStats = {};  // area -> { total, visited, zero: [{name, cancels}], ref: [{name, students}] }
   areaSchools.forEach(s => {
     const keys = [_schoolKey(s.name)];
     if (/^.{2,3}県立/.test(s.name)) keys.push(_schoolKey(s.name.replace(/^.{2,3}県立/, '')));
     const key = keys.find(k => byKey[k]);
     const t = key ? byKey[key] : null;
     if (key) used.add(key);
-    const st = areaStats[s.area] || (areaStats[s.area] = { total: 0, visited: 0, zero: [] });
-    st.total++;
-    if (t) st.visited++; else st.zero.push({ name: s.name, cancels: cancelByKey[keys[0]] || 0 });
+    const st = areaStats[s.area] || (areaStats[s.area] = { total: 0, visited: 0, zero: [], ref: [] });
+    if (s.ref) st.ref.push({ name: s.name, students: t ? t.students : 0 });  // 中高一貫校は集計から除き、参考として列挙
+    else {
+      st.total++;
+      if (t) st.visited++; else st.zero.push({ name: s.name, cancels: cancelByKey[keys[0]] || 0 });
+    }
     if (s.lat == null) return;
-    _visitMarker([s.lat, s.lng], t ? t.students : 0, t && max > 0 ? t.students / max : 0, s.name, popup(s.name, t, s.area), !t);
+    _visitMarker([s.lat, s.lng], t ? t.students : 0, t && max > 0 ? t.students / max : 0, s.name, popup(s.name, t, s.area, s.ref), !t, s.ref);
   });
 
   // 2) それ以外の地域からの来場（来場のあった学校のみ）
@@ -182,9 +239,9 @@ function _renderVisitedMap(label) {
   const cap = document.getElementById('school-map-caption');
   if (cap) {
     const areaNote = Object.keys(areaStats).length
-      ? `下関市・門司区は全${areaSchools.length}校を表示し、まだ来場のない学校は白い丸の「0」で示しています。` : '';
+      ? `下関市・門司区は全${areaSchools.length}校を表示し、まだ来場のない学校は赤い枠の「0」で示しています（灰色の「0」は、通常は来場の対象外である中高一貫校）。` : '';
     const cancelTotal = Object.values(cancelByKey).reduce((a, c) => a + c, 0);
-    cap.innerHTML = `丸の中の数字＝来場者数（実人数）。数が多いほど丸が大きく、色が濃くなります。${areaNote}`
+    cap.innerHTML = `丸の中の数字＝来場者数（実人数）。数が多いほど丸が大きく、色が濃くなります。<b>地図を拡大すると学校名が表示されます。</b>点線は市・区の境界です。<br>${areaNote}`
       + (otherPlaced ? `その他の地域は来場のあった${otherPlaced}校を表示しています。` : '')
       + (cancelTotal ? `<br>来場者数には、申込後に来場しなかった方（キャンセル 計${cancelTotal}名）は含めていません。学校をクリックすると件数を確認できます。` : '')
       + (far.length ? `<br>地図に表示していない学校（遠方または位置不明）：${far.map(t => `${escapeHtml(t.name)}（${t.students}名）`).join('、')}` : '');
@@ -208,6 +265,7 @@ function _renderZeroList(label, areaStats) {
         <div class="zero-chips">${st.zero.length
           ? st.zero.map(z => `<span class="zero-chip">${escapeHtml(_shortSchoolName(z.name))}${z.cancels ? `<small>キャンセル${z.cancels}</small>` : ''}</span>`).join('')
           : '<span class="zero-none">すべての学校から来場がありました</span>'}</div>
+        ${st.ref.length ? `<div class="zero-ref">参考（中高一貫校のため通常は来場の対象外。上の校数には含めていません）：${st.ref.map(r => `${escapeHtml(_shortSchoolName(r.name))}（来場${r.students}名）`).join('、')}</div>` : ''}
       </div>`;
     }).join('')}`;
 }
@@ -238,6 +296,7 @@ function _renderPenetrationMap() {
       .bindTooltip(escapeHtml(s.name.replace(/^.+?[市町村]立/, '')), { direction: 'top', offset: [0, -r] })
       .bindPopup(_penetrationPopup(s))
       .addTo(_schoolMapLayer);
+    _addSchoolLabel(pos, s.name, r + 2);
 
     if (s.students > 0 && r >= 8) _addCountLabel(pos, s.students, s.level === 'high');
   });
@@ -251,6 +310,7 @@ function _renderPenetrationMap() {
       .bindTooltip(escapeHtml(t.name), { direction: 'top', offset: [0, -8] })
       .bindPopup(`<strong>${escapeHtml(t.name)}</strong><br>来場 実人数 <b>${t.students}名</b><br><span class="pen-pop-note">営業リスト外の学校</span>`)
       .addTo(_schoolMapLayer);
+    _addSchoolLabel(geo, t.name, 10);
     _addCountLabel(geo, t.students, false);
     outsidePlaced++;
   });
@@ -266,7 +326,7 @@ function _renderPenetrationMap() {
   const cap = document.getElementById('school-map-caption');
   if (cap) {
     cap.textContent = `営業リストと北九州市（門司区・小倉北区・小倉南区）の${p.schools.length}校（うち中3生徒数の登録 ${p.sizedCount}校）を表示。`
-      + `丸にカーソルを合わせると学校名、クリックで詳細を表示します。`
+      + `地図を拡大すると学校名が表示されます（丸にカーソルを合わせても確認できます）。クリックで詳細を表示します。点線は市・区の境界です。`
       + (outsidePlaced ? `点線の丸は一覧外の学校からの来場 ${outsidePlaced}校です。` : '');
   }
 }
