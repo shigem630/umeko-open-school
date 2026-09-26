@@ -811,6 +811,18 @@ function buildPreSurveyHTML(rows, key) {
 function buildPreSurveyStaffHTML(rows) {
   if (!window.IS_TEACHER) return '';
   const ps = getPreSurvey(rows);
+  // 選択肢の一覧が登録されていれば、誰も選んでいない項目も0人で並べる（選択肢の順）
+  const type = rows.some(r => r._slot === 'jhs') ? 'jhs' : 'elm';
+  const withAll = (m, field) => {
+    const conf = (PRE_SURVEY_OPTIONS[type] || {})[field];
+    if (!conf) return m;
+    const counts = { ...m.counts };
+    conf.list.forEach(o => { if (!(o in counts)) counts[o] = 0; });
+    return { ...m, counts };
+  };
+  ps.teacherConsult = withAll(ps.teacherConsult, 'teacher_consult_topics');
+  ps.examStance     = withAll(ps.examStance, 'exam_stance');
+  ps.otherSchools   = withAll(ps.otherSchools, 'other_schools');
   const multiNote = r => `回答${r}人・複数選択（％は回答者のうち選んだ人の割合）`;
   const singleNote = r => `回答${r}人`;
   const staff = [];
@@ -825,7 +837,7 @@ function buildPreSurveyStaffHTML(rows) {
     _psBarsHTML(ps.otherSchools.counts, ps.otherSchools.respondents) +
     (ps.otherSchoolNotes.length ? `<div class="ps-notes"><span class="ps-notes-label">「その他」の記入：</span>${ps.otherSchoolNotes.map(t => `<span class="ps-chip">${escapeHtml(t)}</span>`).join('')}</div>` : '')));
   const stances = Object.entries(ps.stanceBySchool).sort((a, b) => _sentimentScore(b[0]) - _sentimentScore(a[0]));
-  const schoolCols = Object.keys(ps.otherSchools.counts);
+  const schoolCols = Object.keys(ps.otherSchools.counts).filter(c => ps.otherSchools.counts[c] > 0);
   if (stances.length && schoolCols.length) staff.push(_psBlock('🔀 受験の気持ち別の「ほかに検討中の学校」', '数字は人数（1人が複数の学校を選ぶことがあります）', `
     <div style="overflow-x:auto"><table class="data-table ps-cross">
       <thead><tr><th>現時点の気持ち</th><th>人数</th>${schoolCols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>

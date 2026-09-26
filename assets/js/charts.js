@@ -448,7 +448,8 @@ function buildStackedChart(canvasId, distObj, title) {
 function _sentimentScore(label) {
   const s = String(label);
   if (/第一志望|絶対に入学|非常に良く|大変良く|非常に満足|大変満足/.test(s)) return 6;
-  if (/前向き|良くなった|検討したい|受験したい|入学したい|満足/.test(s))     return 5;
+  if (/前向き|良くなった|検討したい|受験したい|入学したい|満足|有力な候補/.test(s)) return 5;
+  if (/比べて検討/.test(s))                                                 return 4;
   if (/もともと良かった/.test(s))                                          return 4;
   if (/どちらでもない|まだ|わからない|比較|変わらない|未定|検討中/.test(s))   return 3;
   if (/あまり|やや悪|悪くなった|不満|考えていない|下がった/.test(s))         return 2;
