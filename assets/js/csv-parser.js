@@ -113,8 +113,8 @@ function normalizeRow(raw, year = new Date().getFullYear()) {
   if (!row.wants_consultation) {
     for (const [k, v] of Object.entries(raw)) {
       // 「相談内容をご入力ください」の自由記述欄は対象外（希望可否の列だけ拾う）
-      if ((k.includes('相談') || k.includes('面談')) && !k.includes('入力') && !k.includes('内容') &&
-          (k.includes('希望しますか') || k.includes('終了') || k.includes('上限'))) {
+      if ((k.includes('相談') || k.includes('面談')) && !k.includes('入力') && !k.includes('内容') && !k.includes('聞きたい') &&
+          (k.includes('希望しますか') || k.includes('終了') || k.includes('上限') || /面談.*の希望/.test(k))) {
         row.wants_consultation = (v || '').trim();
         break;
       }
@@ -126,7 +126,9 @@ function normalizeRow(raw, year = new Date().getFullYear()) {
   const colVal = k => (k && raw[k] != null ? String(raw[k]).trim() : '');
   const pick = (field, test) => { if (!row[field]) { const k = findCol(test); if (k) row[field] = colVal(k); } };
   pick('parent_topics', k => k.includes('保護者') && k.includes('聞きたい') && k.includes('選'));
-  pick('child_topics',  k => k.includes('聞いてみたい') && k.includes('選'));
+  pick('child_topics',  k => (k.includes('聞いてみたい') || (k.includes('本人') && k.includes('聞きたい'))) && k.includes('選'));
+  pick('teacher_consult_topics', k => k.includes('面談で相談したい'));
+  pick('form_filler',   k => k.includes('入力している方'));
   pick('exam_stance',   k => k.includes('受験について') && (k.includes('気持ち') || k.includes('現時点')));
   pick('other_schools', k => k.includes('検討中の学校'));
   pick('other_schools_note', k => k.includes('「その他」を選んだ'));

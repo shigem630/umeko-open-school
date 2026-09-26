@@ -237,10 +237,11 @@ const CSV_COLUMN_MAP = {
 // 申込時アンケート（2026年11月の説明会から）の項目は列名の文言が変わりやすいので csv-parser.js でキーワード検出する：
 //   parent_topics（保護者が在校生ブースで聞きたいこと・複数）/ child_topics（お子さまが聞いてみたいこと・複数）/
 //   exam_stance（梅光の受験について現時点の気持ち）/ other_schools（ほかに検討中の学校・複数）/ other_schools_note /
-//   cram_school（通っている塾）/ interview_tags（個別面談で聞きたいことの分類。文章そのものは保存しない）
+//   cram_school（通っている塾）/ teacher_consult_topics（教員との面談で相談したい内容・複数、中学生）/
+//   form_filler（このフォームを入力している方：保護者／中学生本人）/ interview_tags（個別面談で聞きたいことの分類。文章そのものは保存しない）
 
 // 生徒ページに出さない項目（営業分析用）。data.json には入れず、教職員向けの暗号化データで共有する
-const STAFF_ONLY_FIELDS = ['cram_school', 'exam_stance', 'other_schools', 'other_schools_note', 'interview_tags'];
+const STAFF_ONLY_FIELDS = ['cram_school', 'exam_stance', 'other_schools', 'other_schools_note', 'interview_tags', 'teacher_consult_topics'];
 
 // 個別面談で聞きたいこと（自由記述）の分類。読み込み時にキーワードで分類し、文章は捨てる
 const INTERVIEW_TOPIC_RULES = [
@@ -249,9 +250,9 @@ const INTERVIEW_TOPIC_RULES = [
   ['部活動',           /部活/],
   ['学習・成績',       /勉強|学習|成績|テスト|宿題|授業|進度/],
   ['英語・留学',       /英語|留学|オーストラリア|海外/],
-  ['出席・配慮',       /学校に行け|不登校|欠席|出席|配慮|発達|体調|登校/],
+  ['出席・体調・配慮', /学校に行け|不登校|欠席|出席|配慮|発達|体調|登校|障害|病気|起立性/],
   ['友人・学校生活',   /友達|友だち|人間関係|いじめ|担任|生活|校則/],
-  ['通学',             /通学|バス|電車|送迎|寮/],
+  ['通学',             /通学|から通|通って|バス|電車|送迎|寮/],
   ['習い事・課外活動', /習い事|大会|クラブ|コンクール/],
   ['進路・大学',       /進路|大学|進学/],
 ];

@@ -1109,3 +1109,10 @@ body.view-only .admin-only { display: none !important; }
   .ps-grid { grid-template-columns: 1fr; }
 }
 @media print { .ps-staff { break-inside: avoid; } }
+
+.ps-summary { background: var(--color-gold-soft); border: 1px solid #F0DFA8; border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-5); }
+.ps-summary-title { font-weight: 700; font-size: var(--text-sm); margin-bottom: var(--space-1); }
+.ps-summary ul { margin: 0; padding-left: 1.2em; font-size: var(--text-sm); line-height: 1.7; }
+.ps-sum-label { display: inline-block; min-width: 13em; color: var(--color-gray-700); font-weight: 700; margin-right: var(--space-2); }
+.ps-sum-num { color: var(--color-gray-500); font-size: var(--text-xs); white-space: nowrap; }
+@media (max-width: 640px) { .ps-sum-label { display: block; min-width: 0; } }

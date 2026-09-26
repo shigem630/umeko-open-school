@@ -688,13 +688,16 @@ function buildPreSurveyHTML(rows) {
   const open = [];
   if (ps.parentTopics.respondents) open.push(_psBlock('👪 保護者が在校生ブースで聞きたいこと', multiNote(ps.parentTopics.respondents),
     _psBarsHTML(ps.parentTopics.counts, ps.parentTopics.respondents)));
-  if (ps.childTopics.respondents) open.push(_psBlock('🧒 お子さまが聞いてみたいこと', multiNote(ps.childTopics.respondents),
+  const childTitle = ps.childIsJhs ? '🧑‍🎓 中学生本人が在校生ブースで聞きたいこと' : '🧒 お子さまが聞いてみたいこと';
+  if (ps.childTopics.respondents) open.push(_psBlock(childTitle, multiNote(ps.childTopics.respondents),
     _psBarsHTML(ps.childTopics.counts, ps.childTopics.respondents)));
   if (ps.interview.respondents) open.push(_psBlock('💬 個別面談（約15分）の希望', singleNote(ps.interview.respondents),
     _psBarsHTML(ps.interview.counts, ps.interview.respondents)));
 
   const staff = [];
   if (window.IS_TEACHER) {
+    if (ps.teacherConsult.respondents) staff.push(_psBlock('👩‍🏫 教員との面談で相談したい内容', multiNote(ps.teacherConsult.respondents),
+      _psBarsHTML(ps.teacherConsult.counts, ps.teacherConsult.respondents)));
     if (ps.examStance.respondents) staff.push(_psBlock('🎯 梅光の受験について、現時点の気持ち', singleNote(ps.examStance.respondents),
       _psBarsHTML(ps.examStance.counts, ps.examStance.respondents, { sentiment: true })));
     if (ps.otherSchools.respondents) staff.push(_psBlock('🏫 ほかに検討中の学校', multiNote(ps.otherSchools.respondents),
@@ -716,10 +719,29 @@ function buildPreSurveyHTML(rows) {
   }
   if (!open.length && !staff.length) return '';
 
+  // まとめ：それぞれの質問で一番多かった答え（同数は並べる）
+  const top = (m) => {
+    const e = Object.entries(m.counts || {});
+    if (!e.length) return '';
+    const max = e[0][1];
+    const names = e.filter(([, n]) => n === max).map(([l]) => `「${escapeHtml(l)}」`);
+    const pct = m.respondents ? Math.round(max * 100 / m.respondents) : 0;
+    return `${names.slice(0, 3).join('')}${names.length > 3 ? `ほか${names.length - 3}件` : ''} <span class="ps-sum-num">${max}人・${pct}%</span>`;
+  };
+  const sums = [
+    ['保護者が聞きたいこと', top(ps.parentTopics)],
+    [ps.childIsJhs ? '中学生本人が聞きたいこと' : 'お子さまが聞きたいこと', top(ps.childTopics)],
+  ];
+  if (window.IS_TEACHER) sums.push(['教員との面談で相談したいこと', top(ps.teacherConsult)], ['面談で聞きたいこと（分類）', top(ps.interviewTags)]);
+  const summary = sums.filter(([, v]) => v).map(([k, v]) => `<li><span class="ps-sum-label">${k}</span>${v}</li>`).join('');
+  const filler = Object.entries(ps.formFiller);
+  const fillerNote = filler.length ? `（入力した人：${filler.map(([k, n]) => `${escapeHtml(k)} ${n}人`).join('・')}）` : '';
+
   return `
     <div class="card pre-survey-card">
       <div class="card-title">📝 申込時アンケート（参加者が知りたいこと）</div>
-      <div class="ps-lead">申込${ps.total}人の回答です。</div>
+      <div class="ps-lead">申込${ps.total}人の回答です。${fillerNote}</div>
+      ${summary ? `<div class="ps-summary"><div class="ps-summary-title">💡 いちばん多かった答え</div><ul>${summary}</ul></div>` : ''}
       ${open.length ? `<div class="ps-grid">${open.join('')}</div>` : ''}
       ${staff.length ? `
         <div class="ps-staff">
