@@ -390,6 +390,8 @@ function buildBeforePanelHTML(key, rows = []) {
   const jhsOpt = isCombined ? getOptionCounts(jhsRows) : getOptionCounts(rows);
   const elmOpt = isCombined ? getOptionCounts(elmRows) : null;
 
+  // 単独の回（11/7 小学生など）は、その回の対象で表示する
+  const firstLabel = isCombined || !event || event.csvSlots[0].type !== 'elm' ? '中学生' : '小学生';
   function optionRow(label, waitlistLabel, jhs, elm) {
     const jhsAvail = jhs.available;
     const elmAvail = elm && elm.available;
@@ -397,14 +399,14 @@ function buildBeforePanelHTML(key, rows = []) {
     const wantRow = `
       <div class="breakdown-option-row">
         <span class="breakdown-option-label">${label}</span>
-        ${jhsAvail ? `<span class="breakdown-option-jhs">中学生 ${jhs.want}人</span>` : ''}
+        ${jhsAvail ? `<span class="breakdown-option-jhs">${firstLabel} ${jhs.want}人</span>` : ''}
         ${elmAvail ? `<span class="breakdown-option-elm">小学生 ${elm.want}人</span>` : ''}
       </div>`;
     const hasWaitlist = (jhsAvail && jhs.waitlist > 0) || (elmAvail && elm.waitlist > 0);
     const waitRow = hasWaitlist ? `
       <div class="breakdown-option-row waitlist-row">
         <span class="breakdown-option-label breakdown-option-sub">└ ${waitlistLabel}</span>
-        ${jhsAvail && jhs.waitlist > 0 ? `<span class="breakdown-option-jhs faded">中学生 ${jhs.waitlist}人</span>` : ''}
+        ${jhsAvail && jhs.waitlist > 0 ? `<span class="breakdown-option-jhs faded">${firstLabel} ${jhs.waitlist}人</span>` : ''}
         ${elmAvail && elm.waitlist > 0 ? `<span class="breakdown-option-elm faded">小学生 ${elm.waitlist}人</span>` : ''}
       </div>` : '';
     return wantRow + waitRow;
@@ -607,6 +609,8 @@ function buildBeforePanelHTML(key, rows = []) {
     </div>
     `}
 
+    ${buildPreSurveyHTML(rows)}
+
     <div class="card">
       <div class="card-title">🎓 学年別申込数</div>
       <div id="grade-${key}-wrap" style="position:relative;height:${gradeHeight}"><canvas id="grade-${key}"></canvas></div>
@@ -645,6 +649,84 @@ function buildBeforePanelHTML(key, rows = []) {
     </div>
     `}
   `;
+}
+
+// ===== 申込時アンケート（11月の説明会〜）=====
+// 棒の長さ＝その質問に答えた人のうち何％が選んだか（複数選択は合計が100％を超える）
+function _psBarsHTML(counts, respondents, opts = {}) {
+  let entries = Object.entries(counts || {});
+  if (!entries.length) return '<div class="ps-empty">回答なし</div>';
+  if (opts.sentiment) entries.sort((a, b) => (_sentimentScore(b[0]) - _sentimentScore(a[0])) || b[1] - a[1]);
+  if (opts.limit) entries = entries.slice(0, opts.limit);
+  return `<div class="ps-bars">${entries.map(([label, n]) => {
+    const pct = respondents ? Math.round(n * 100 / respondents) : 0;
+    const color = opts.sentiment ? (_SENTIMENT_COLORS[_sentimentScore(label)] || '#9E9E9E') : '';
+    return `
+      <div class="ps-bar-row">
+        <div class="ps-bar-label">${escapeHtml(label)}</div>
+        <div class="ps-bar-track"><div class="ps-bar-fill" style="width:${pct}%;${color ? `background:${color}` : ''}"></div></div>
+        <div class="ps-bar-num">${n}人<span>${pct}%</span></div>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+function _psBlock(title, note, body) {
+  return `
+    <div class="ps-block">
+      <div class="ps-block-title">${title}</div>
+      ${note ? `<div class="ps-block-note">${note}</div>` : ''}
+      ${body}
+    </div>`;
+}
+
+function buildPreSurveyHTML(rows) {
+  const ps = getPreSurvey(rows);
+  if (!ps.available) return '';
+  const multiNote = r => `回答${r}人・複数選択（％は回答者のうち選んだ人の割合）`;
+  const singleNote = r => `回答${r}人`;
+
+  const open = [];
+  if (ps.parentTopics.respondents) open.push(_psBlock('👪 保護者が在校生ブースで聞きたいこと', multiNote(ps.parentTopics.respondents),
+    _psBarsHTML(ps.parentTopics.counts, ps.parentTopics.respondents)));
+  if (ps.childTopics.respondents) open.push(_psBlock('🧒 お子さまが聞いてみたいこと', multiNote(ps.childTopics.respondents),
+    _psBarsHTML(ps.childTopics.counts, ps.childTopics.respondents)));
+  if (ps.interview.respondents) open.push(_psBlock('💬 個別面談（約15分）の希望', singleNote(ps.interview.respondents),
+    _psBarsHTML(ps.interview.counts, ps.interview.respondents)));
+
+  const staff = [];
+  if (window.IS_TEACHER) {
+    if (ps.examStance.respondents) staff.push(_psBlock('🎯 梅光の受験について、現時点の気持ち', singleNote(ps.examStance.respondents),
+      _psBarsHTML(ps.examStance.counts, ps.examStance.respondents, { sentiment: true })));
+    if (ps.otherSchools.respondents) staff.push(_psBlock('🏫 ほかに検討中の学校', multiNote(ps.otherSchools.respondents),
+      _psBarsHTML(ps.otherSchools.counts, ps.otherSchools.respondents) +
+      (ps.otherSchoolNotes.length ? `<div class="ps-notes"><span class="ps-notes-label">「その他」の記入：</span>${ps.otherSchoolNotes.map(t => `<span class="ps-chip">${escapeHtml(t)}</span>`).join('')}</div>` : '')));
+    // 受験の気持ち × ほかに検討中の学校
+    const stances = Object.entries(ps.stanceBySchool).sort((a, b) => _sentimentScore(b[0]) - _sentimentScore(a[0]));
+    const schoolCols = Object.keys(ps.otherSchools.counts);
+    if (stances.length && schoolCols.length) staff.push(_psBlock('🔀 受験の気持ち別の「ほかに検討中の学校」', '数字は人数（1人が複数の学校を選ぶことがあります）', `
+      <div style="overflow-x:auto"><table class="data-table ps-cross">
+        <thead><tr><th>現時点の気持ち</th><th>人数</th>${schoolCols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+        <tbody>${stances.map(([st, m]) => `<tr><td>${escapeHtml(st)}</td><td>${m.n}</td>${schoolCols.map(c => `<td>${m.schools[c] || ''}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>`));
+    if (ps.interviewTags.respondents || ps.interviewNone) staff.push(_psBlock('📋 個別面談で聞きたいこと（内容の分類）',
+      `記入${ps.interviewTags.respondents}人を内容で分類（1人が複数に当てはまることがあります）${ps.interviewNone ? `／「なし」など${ps.interviewNone}人` : ''}。個人的な相談を含むため、文章そのものは保存していません`,
+      ps.interviewTags.respondents ? _psBarsHTML(ps.interviewTags.counts, ps.interviewTags.respondents) : ''));
+    if (ps.crams.respondents) staff.push(_psBlock('📚 通っている塾', `記入${ps.crams.respondents}人（申込${ps.total}人のうち）。表記ゆれはそのまま表示しています`,
+      `<div class="ps-notes">${Object.entries(ps.crams.counts).map(([n, c]) => `<span class="ps-chip">${escapeHtml(n)} <strong>${c}</strong></span>`).join('')}</div>`));
+  }
+  if (!open.length && !staff.length) return '';
+
+  return `
+    <div class="card pre-survey-card">
+      <div class="card-title">📝 申込時アンケート（参加者が知りたいこと）</div>
+      <div class="ps-lead">申込${ps.total}人の回答です。</div>
+      ${open.length ? `<div class="ps-grid">${open.join('')}</div>` : ''}
+      ${staff.length ? `
+        <div class="ps-staff">
+          <div class="ps-staff-head">🔒 ここから下は教職員だけに表示（生徒ページには出ません）</div>
+          <div class="ps-grid">${staff.join('')}</div>
+        </div>` : ''}
+    </div>`;
 }
 
 // 音楽科体験レッスン会の内訳（内訳カードの末尾に折りたたみで表示）

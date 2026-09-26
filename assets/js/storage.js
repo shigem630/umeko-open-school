@@ -10,6 +10,43 @@ function setSharedSlotData(slots) {
   _sharedSlotData = slots || null;
 }
 
+// 今年度の回の、生徒ページに出さない項目（STAFF_ONLY_FIELDS）。{スロットID: {BLEND管理番号: {項目: 値}}}
+// data.json からは外してあり、教職員向けの暗号化データを復号したときだけメモリ上に置く
+let _sharedStaffFields = null;
+function setSharedStaffFields(map) {
+  _sharedStaffFields = map || null;
+}
+
+// 公開用：行から生徒ページに出さない項目を外す
+function stripStaffOnlyFields(data) {
+  if (!data || !data.rows) return data;
+  return { ...data, rows: data.rows.map(r => {
+    const c = { ...r };
+    STAFF_ONLY_FIELDS.forEach(f => delete c[f]);
+    return c;
+  }) };
+}
+
+// 共有用：今年度の回の STAFF_ONLY_FIELDS を集める（このパソコンの値を優先し、無ければ共有済みの値を引き継ぐ）
+function collectStaffFields() {
+  const out = JSON.parse(JSON.stringify(_sharedStaffFields || {}));
+  allSlots(CURRENT_YEAR).forEach(({ slot }) => {
+    const data = safeGet('data_' + slot.id);
+    if (!data || !data.rows) return;
+    data.rows.forEach(r => {
+      const vals = {};
+      STAFF_ONLY_FIELDS.forEach(f => { if (r[f]) vals[f] = r[f]; });
+      if (!Object.keys(vals).length || !r.blend_id) return;
+      (out[slot.id] || (out[slot.id] = {}))[r.blend_id] = vals;
+    });
+  });
+  return out;
+}
+
+function hasStaffFields(map) {
+  return Object.values(map || {}).some(m => Object.keys(m).length);
+}
+
 function setPublishedCache(data) {
   _publishedCache = data || null;
 }
@@ -136,7 +173,14 @@ function _getSlotRows(eventKey, slotFilter) {
   for (const slot of event.csvSlots.filter(slotFilter)) {
     const data = getEventData(slot.id);
     if (data && data.rows) {
-      rows.push(...data.rows.map(r => ({ ...r, _slot: slot.type })));
+      const extra = (_sharedStaffFields && _sharedStaffFields[slot.id]) || null;
+      rows.push(...data.rows.map(r => {
+        const add = extra && extra[r.blend_id];
+        if (!add) return { ...r, _slot: slot.type };
+        const merged = { ...r, _slot: slot.type };
+        Object.entries(add).forEach(([f, v]) => { if (!merged[f]) merged[f] = v; });
+        return merged;
+      }));
     }
   }
   return rows;

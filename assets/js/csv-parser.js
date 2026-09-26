@@ -121,6 +121,31 @@ function normalizeRow(raw, year = new Date().getFullYear()) {
     }
   }
 
+  // ===== 申込時アンケート（11月の説明会〜）：列名のキーワードで検出 =====
+  const findCol = test => Object.keys(raw).find(test);
+  const colVal = k => (k && raw[k] != null ? String(raw[k]).trim() : '');
+  const pick = (field, test) => { if (!row[field]) { const k = findCol(test); if (k) row[field] = colVal(k); } };
+  pick('parent_topics', k => k.includes('保護者') && k.includes('聞きたい') && k.includes('選'));
+  pick('child_topics',  k => k.includes('聞いてみたい') && k.includes('選'));
+  pick('exam_stance',   k => k.includes('受験について') && (k.includes('気持ち') || k.includes('現時点')));
+  pick('other_schools', k => k.includes('検討中の学校'));
+  pick('other_schools_note', k => k.includes('「その他」を選んだ'));
+  pick('cram_school',   k => k.includes('通っている塾'));
+  pick('satisfaction',  k => k.includes('総合的な満足度'));
+  pick('student_run_feedback', k => k.includes('生徒が全権'));
+  pick('exam_intent',   k => k.includes('受験（入学）の意欲'));
+  pick('free_comment',  k => k.includes('メッセージ」を自由に'));
+  // 個別面談で聞きたいこと：個人的な相談を含むため文章は保存せず、分類（タグ）だけ残す
+  const interviewCol = findCol(k => k.includes('面談で聞きたい') || (k.includes('相談') && k.includes('聞きたい')));
+  if (interviewCol) {
+    const text = colVal(interviewCol).normalize('NFKC');
+    const tags = INTERVIEW_TOPIC_RULES.filter(([, re]) => re.test(text)).map(([name]) => name);
+    if (!text) row.interview_tags = '';
+    else if (tags.length) row.interview_tags = tags.join('/');
+    else if (/^(なし|特になし|ない|無し|特に無し)|特にな|わからない|分からない/.test(text)) row.interview_tags = '特になし';
+    else row.interview_tags = 'その他';
+  }
+
   // 音楽科CSV: 専攻・楽器名（「※管楽器は…」「※管楽器・弦楽器は…」など注記が回ごとに違う）
   for (const [k, v] of Object.entries(raw)) {
     if (k.startsWith('専攻') || k.includes('楽器名')) {

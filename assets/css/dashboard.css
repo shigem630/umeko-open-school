@@ -1083,3 +1083,29 @@ body.view-only .admin-only { display: none !important; }
 .exam-unlock-title { font-weight: 700; color: var(--color-gray-900); margin-bottom: var(--space-1); }
 .exam-unlock-form { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; margin-top: var(--space-2); }
 .exam-unlock-form .form-input { flex: 1 1 200px; max-width: 280px; }
+
+/* ===== 申込時アンケート ===== */
+.pre-survey-card .ps-lead { font-size: var(--text-sm); color: var(--color-gray-500); margin-bottom: var(--space-3); }
+.ps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-5) var(--space-6); }
+.ps-block-title { font-weight: 700; font-size: var(--text-base); margin-bottom: 2px; }
+.ps-block-note { font-size: var(--text-xs); color: var(--color-gray-500); margin-bottom: var(--space-2); }
+.ps-bars { display: flex; flex-direction: column; gap: 8px; }
+.ps-bar-row { display: grid; grid-template-columns: minmax(0, 1fr) 5em; align-items: center; column-gap: var(--space-2); row-gap: 2px; font-size: var(--text-sm); }
+.ps-bar-label { grid-column: 1 / -1; line-height: 1.35; }
+.ps-bar-track { background: var(--color-gray-100); border-radius: var(--radius-full); height: 12px; overflow: hidden; }
+.ps-bar-fill { height: 100%; background: var(--color-primary-light); border-radius: var(--radius-full); }
+.ps-bar-num { text-align: right; font-weight: 700; white-space: nowrap; }
+.ps-bar-num span { font-weight: 400; color: var(--color-gray-500); font-size: var(--text-xs); margin-left: 4px; }
+.ps-empty { font-size: var(--text-sm); color: var(--color-gray-400); }
+.ps-notes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2); font-size: var(--text-sm); align-items: center; }
+.ps-notes-label { color: var(--color-gray-500); font-size: var(--text-xs); }
+.ps-chip { background: var(--color-gray-100); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 2px 10px; }
+.ps-staff { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 2px dashed var(--color-border); }
+.ps-staff-head { font-size: var(--text-sm); font-weight: 700; color: var(--color-primary); margin-bottom: var(--space-4); }
+.ps-staff .ps-grid > .ps-block:has(.ps-cross) { grid-column: 1 / -1; }
+.ps-cross th, .ps-cross td { font-size: var(--text-xs); text-align: center; }
+.ps-cross td:first-child, .ps-cross th:first-child { text-align: left; }
+@media (max-width: 640px) {
+  .ps-grid { grid-template-columns: 1fr; }
+}
+@media print { .ps-staff { break-inside: avoid; } }

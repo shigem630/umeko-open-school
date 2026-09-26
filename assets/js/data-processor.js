@@ -256,6 +256,70 @@ function getExamIntentDist(rows) {
   return countByField(rows, 'exam_intent');
 }
 
+// ===== 申込時アンケート（11月の説明会〜）=====
+// 複数選択は「/」区切り。respondents＝その質問に答えた人数（割合の分母）
+function _countMulti(rows, field) {
+  const counts = {};
+  let respondents = 0;
+  for (const r of rows) {
+    const items = String(r[field] || '').split('/').map(x => x.trim()).filter(Boolean);
+    if (!items.length) continue;
+    respondents++;
+    for (const it of new Set(items)) counts[it] = (counts[it] || 0) + 1;
+  }
+  return { counts: sortObjectByValue(counts), respondents };
+}
+
+function _cramName(raw) {
+  const n = String(raw || '').normalize('NFKC').replace(/\s/g, '');
+  if (!n || /^(なし|無し|ない|特になし|-|ー|通っていない|行っていない)$/.test(n)) return '';
+  return n;
+}
+
+// 申込時アンケートの集計。available=false ならこの回のCSVに該当の質問がない
+function getPreSurvey(rows) {
+  rows = rows.filter(r => !isTestSchoolName(r.school));
+  const single = field => {
+    const counts = countByField(rows, field);
+    return { counts, respondents: Object.values(counts).reduce((a, b) => a + b, 0) };
+  };
+  // 個別面談の希望（在校生と／教員と／両方／希望しない）は wants_consultation に入っている
+  const interview = single('wants_consultation');
+  const isInterviewStyle = Object.keys(interview.counts).some(k => /話したい|両方|希望しない/.test(k));
+  const crams = {};
+  let cramAnswered = 0;
+  for (const r of rows) {
+    const n = _cramName(r.cram_school);
+    if (!n) continue;
+    cramAnswered++;
+    crams[n] = (crams[n] || 0) + 1;
+  }
+  const res = {
+    total: rows.length,
+    parentTopics: _countMulti(rows, 'parent_topics'),
+    childTopics:  _countMulti(rows, 'child_topics'),
+    interview:    isInterviewStyle ? interview : { counts: {}, respondents: 0 },
+    interviewTags: _countMulti(rows.filter(r => r.interview_tags && r.interview_tags !== '特になし'), 'interview_tags'),
+    interviewNone: rows.filter(r => r.interview_tags === '特になし').length,
+    examStance:   single('exam_stance'),
+    otherSchools: _countMulti(rows, 'other_schools'),
+    otherSchoolNotes: rows.map(r => (r.other_schools_note || '').trim()).filter(Boolean),
+    crams: { counts: sortObjectByValue(crams), respondents: cramAnswered },
+  };
+  // 受験の気持ち × ほかに検討中の学校
+  res.stanceBySchool = {};
+  for (const r of rows) {
+    if (!r.exam_stance) continue;
+    const m = res.stanceBySchool[r.exam_stance] || (res.stanceBySchool[r.exam_stance] = { n: 0, schools: {} });
+    m.n++;
+    String(r.other_schools || '').split('/').map(x => x.trim()).filter(Boolean)
+      .forEach(x => { m.schools[x] = (m.schools[x] || 0) + 1; });
+  }
+  res.available = res.parentTopics.respondents + res.childTopics.respondents + res.examStance.respondents +
+    res.otherSchools.respondents + res.interview.respondents > 0;
+  return res;
+}
+
 // Returns grade distribution sorted in school-year order
 function getGradeDist(rows) {
   const ORDER = ['1年生','2年生','3年生','4年生','5年生','6年生'];
@@ -407,6 +471,8 @@ function _parseWants(val) {
   const v = String(val).trim();
   if (!v) return null;
   if (v === '1' || v === 'はい' || v.startsWith('はい')) return 'want';
+  if (v.includes('希望しない')) return 'declined';                        // 11月の説明会：個別面談
+  if (v.includes('話したい') || v === '両方') return 'want';              // 在校生と／教員と話したい・両方
   if (v.includes('別の機会') || v.includes('また申し込')) return 'waitlist';
   if (v === '2' || v === 'いいえ' || v.startsWith('いいえ') || v.includes('了承') || v.includes('分かりました')) return 'declined';
   return null;

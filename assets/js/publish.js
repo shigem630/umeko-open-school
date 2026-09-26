@@ -37,7 +37,7 @@ function buildExportData() {
   const slots = {};
   allSlots(CURRENT_YEAR).forEach(({ slot }) => {
     const data = safeGet('data_' + slot.id);
-    if (data) slots[slot.id] = data;
+    if (data) slots[slot.id] = stripStaffOnlyFields(data);  // 塾名・受験の気持ちなどは暗号化データの方で共有
   });
   const config = getConfig();
   return {

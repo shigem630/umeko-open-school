@@ -78,10 +78,12 @@ async function buildSharedExamPayload() {
     const d = safeGet('data_' + slot.id);
     if (d) { pastSlots[slot.id] = d; localPast++; }
   });
+  // 今年度の回の、生徒ページに出さない項目（塾名・受験の気持ちなど）
+  const staffFields = collectStaffFields();
   const local = _getLocalExamData();
-  if (!local && !localPast) return { shared: safeGet(EXAM_SHARED_KEY), note: '' };
+  if (!local && !localPast && !hasStaffFields(staffFields)) return { shared: safeGet(EXAM_SHARED_KEY), note: '' };
   const base = local || _sharedExamData || _emptyExamData();
-  const rec = { version: 2, exams: base.exams || {}, visits: base.visits || {}, pastSlots };
+  const rec = { version: 2, exams: base.exams || {}, visits: base.visits || {}, pastSlots, staffFields };
 
   // 閲覧用パスワードが変更されていたら、保存済みの鍵は使わず入力し直してもらう
   const saved = safeGet(EXAM_SHARE_KEY_KEY);
@@ -99,7 +101,7 @@ async function buildSharedExamPayload() {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await _importAesKey(keyB64),
     new TextEncoder().encode(JSON.stringify(rec)));
-  return { shared: { v: 2, iv: bytesToBase64(iv), data: bytesToBase64(new Uint8Array(cipher)) }, note: '入試データ・過去の年度のデータも教職員に共有しました。' };
+  return { shared: { v: 2, iv: bytesToBase64(iv), data: bytesToBase64(new Uint8Array(cipher)) }, note: '入試データ・過去の年度のデータ・申込時アンケートの教職員用項目も教職員に共有しました。' };
 }
 
 // 閲覧用：取り込み済みの暗号化データを復号してメモリに置く
@@ -117,6 +119,7 @@ async function loadSharedExamRecords() {
       await _importAesKey(keyB64), base64ToBytes(blob.data));
     _sharedExamData = _migrateExamData(JSON.parse(new TextDecoder().decode(plain)));
     if (typeof setSharedSlotData === 'function') setSharedSlotData(_sharedExamData && _sharedExamData.pastSlots);
+    if (typeof setSharedStaffFields === 'function') setSharedStaffFields(_sharedExamData && _sharedExamData.staffFields);
     return (_sharedExamStatus = _sharedExamData ? 'ok' : 'nodata');
   } catch (_) {
     return (_sharedExamStatus = 'fail');
@@ -285,6 +288,7 @@ async function importExamFiles(fileList) {
 
   const data = _getLocalExamData() || (_sharedExamData ? JSON.parse(JSON.stringify(_sharedExamData)) : _emptyExamData());
   delete data.pastSlots;  // 過去の年度の回のデータは data_<スロット> に保存する（入試データとは別）
+  delete data.staffFields;
   const now = new Date().toISOString();
 
   // 受験者一覧：入試区分（ファイル）ごとに置き換え
