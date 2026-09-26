@@ -510,6 +510,7 @@ function buildBeforePanelHTML(key, rows = []) {
 
   return `
     ${breakdownCard}
+    ${buildPreSurveyHTML(rows, key)}
     <div class="card chart-row">
       <div class="chart-toolbar">
         <div class="chart-title">📈 日別申込推移</div>
@@ -609,7 +610,7 @@ function buildBeforePanelHTML(key, rows = []) {
     </div>
     `}
 
-    ${buildPreSurveyHTML(rows)}
+    ${buildPreSurveyStaffHTML(rows)}
 
     <div class="card">
       <div class="card-title">🎓 学年別申込数</div>
@@ -670,84 +671,173 @@ function _psBarsHTML(counts, respondents, opts = {}) {
   }).join('')}</div>`;
 }
 
-function _psBlock(title, note, body) {
+function _psBlock(title, note, body, cls = '') {
   return `
-    <div class="ps-block">
+    <div class="ps-block ${cls}">
       <div class="ps-block-title">${title}</div>
       ${note ? `<div class="ps-block-note">${note}</div>` : ''}
       ${body}
     </div>`;
 }
 
-function buildPreSurveyHTML(rows) {
-  const ps = getPreSurvey(rows);
-  if (!ps.available) return '';
-  const multiNote = r => `回答${r}人・複数選択（％は回答者のうち選んだ人の割合）`;
-  const singleNote = r => `回答${r}人`;
+// 「3つまで選ぶ」質問の集計：選択肢を全部並べ（0人も表示）、順位・選んだ数・受験の気持ち別（教職員のみ）
+const _psExports = {};
+function _psRankingHTML(rows, field, type, exportName) {
+  const conf = (PRE_SURVEY_OPTIONS[type] || {})[field] || { complete: false, list: [] };
+  const answered = rows.filter(r => String(r[field] || '').trim());
+  const perRow = answered.map(r => [...new Set(String(r[field]).split('/').map(x => x.trim()).filter(Boolean))]);
+  const counts = {};
+  conf.list.forEach(o => { counts[o] = 0; });
+  perRow.forEach(items => items.forEach(it => { counts[it] = (counts[it] || 0) + 1; }));
+  const n = answered.length;
+  // 並び：人数の多い順（同数は選択肢の順）。順位は同数なら同じ順位
+  const order = Object.keys(counts);
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1] || order.indexOf(a[0]) - order.indexOf(b[0]));
+  let rank = 0, prev = null;
+  const ranked = entries.map(([label, c], i) => {
+    if (c !== prev) { rank = i + 1; prev = c; }
+    return { label, c, rank, pct: n ? Math.round(c * 100 / n) : 0 };
+  });
+  const picked = ranked.filter(x => x.c > 0), zero = ranked.filter(x => x.c === 0);
+  const max = picked.length ? picked[0].c : 1;
 
-  const open = [];
-  if (ps.parentTopics.respondents) open.push(_psBlock('👪 保護者が在校生ブースで聞きたいこと', multiNote(ps.parentTopics.respondents),
-    _psBarsHTML(ps.parentTopics.counts, ps.parentTopics.respondents)));
-  const childTitle = ps.childIsJhs ? '🧑‍🎓 中学生本人が在校生ブースで聞きたいこと' : '🧒 お子さまが聞いてみたいこと';
-  if (ps.childTopics.respondents) open.push(_psBlock(childTitle, multiNote(ps.childTopics.respondents),
-    _psBarsHTML(ps.childTopics.counts, ps.childTopics.respondents)));
-  if (ps.interview.respondents) open.push(_psBlock('💬 個別面談（約15分）の希望', singleNote(ps.interview.respondents),
-    _psBarsHTML(ps.interview.counts, ps.interview.respondents)));
+  // 選んだ数（1つ・2つ・3つ）
+  const howMany = {};
+  perRow.forEach(items => { const k = Math.min(items.length, 3); howMany[k] = (howMany[k] || 0) + 1; });
+  const avg = n ? (perRow.reduce((a, items) => a + items.length, 0) / n).toFixed(1) : '0';
+  const howManyText = [3, 2, 1].filter(k => howMany[k]).map(k => `${k}つ ${howMany[k]}人`).join('・');
 
-  const staff = [];
+  const rowHTML = x => `
+    <div class="ps-rank-row${x.c === 0 ? ' zero' : ''}${x.c > 0 && x.rank <= 3 ? ' top' : ''}">
+      <div class="ps-rank-no">${x.c > 0 ? x.rank : '–'}</div>
+      <div class="ps-rank-main">
+        <div class="ps-rank-label">${escapeHtml(x.label)}</div>
+        <div class="ps-bar-track"><div class="ps-bar-fill" style="width:${Math.round(x.c * 100 / max)}%"></div></div>
+      </div>
+      <div class="ps-bar-num">${x.c}人<span>${x.pct}%</span></div>
+    </div>`;
+
+  // 受験の気持ち別（教職員のみ。exam_stance は生徒ページのデータには無い）
+  let crossHTML = '';
   if (window.IS_TEACHER) {
-    if (ps.teacherConsult.respondents) staff.push(_psBlock('👩‍🏫 教員との面談で相談したい内容', multiNote(ps.teacherConsult.respondents),
-      _psBarsHTML(ps.teacherConsult.counts, ps.teacherConsult.respondents)));
-    if (ps.examStance.respondents) staff.push(_psBlock('🎯 梅光の受験について、現時点の気持ち', singleNote(ps.examStance.respondents),
-      _psBarsHTML(ps.examStance.counts, ps.examStance.respondents, { sentiment: true })));
-    if (ps.otherSchools.respondents) staff.push(_psBlock('🏫 ほかに検討中の学校', multiNote(ps.otherSchools.respondents),
-      _psBarsHTML(ps.otherSchools.counts, ps.otherSchools.respondents) +
-      (ps.otherSchoolNotes.length ? `<div class="ps-notes"><span class="ps-notes-label">「その他」の記入：</span>${ps.otherSchoolNotes.map(t => `<span class="ps-chip">${escapeHtml(t)}</span>`).join('')}</div>` : '')));
-    // 受験の気持ち × ほかに検討中の学校
-    const stances = Object.entries(ps.stanceBySchool).sort((a, b) => _sentimentScore(b[0]) - _sentimentScore(a[0]));
-    const schoolCols = Object.keys(ps.otherSchools.counts);
-    if (stances.length && schoolCols.length) staff.push(_psBlock('🔀 受験の気持ち別の「ほかに検討中の学校」', '数字は人数（1人が複数の学校を選ぶことがあります）', `
-      <div style="overflow-x:auto"><table class="data-table ps-cross">
-        <thead><tr><th>現時点の気持ち</th><th>人数</th>${schoolCols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
-        <tbody>${stances.map(([st, m]) => `<tr><td>${escapeHtml(st)}</td><td>${m.n}</td>${schoolCols.map(c => `<td>${m.schools[c] || ''}</td>`).join('')}</tr>`).join('')}</tbody>
-      </table></div>`));
-    if (ps.interviewTags.respondents || ps.interviewNone) staff.push(_psBlock('📋 個別面談で聞きたいこと（内容の分類）',
-      `記入${ps.interviewTags.respondents}人を内容で分類（1人が複数に当てはまることがあります）${ps.interviewNone ? `／「なし」など${ps.interviewNone}人` : ''}。個人的な相談を含むため、文章そのものは保存していません`,
-      ps.interviewTags.respondents ? _psBarsHTML(ps.interviewTags.counts, ps.interviewTags.respondents) : ''));
-    if (ps.crams.respondents) staff.push(_psBlock('📚 通っている塾', `記入${ps.crams.respondents}人（申込${ps.total}人のうち）。表記ゆれはそのまま表示しています`,
-      `<div class="ps-notes">${Object.entries(ps.crams.counts).map(([n, c]) => `<span class="ps-chip">${escapeHtml(n)} <strong>${c}</strong></span>`).join('')}</div>`));
+    const stances = [...new Set(answered.map(r => r.exam_stance).filter(Boolean))]
+      .sort((a, b) => _sentimentScore(b) - _sentimentScore(a));
+    if (stances.length) {
+      const sN = st => answered.filter(r => r.exam_stance === st).length;
+      const cell = (label, st) => answered.filter(r => r.exam_stance === st && String(r[field]).split('/').map(x => x.trim()).includes(label)).length;
+      crossHTML = `
+        <details class="ps-cross-details">
+          <summary>🔒 受験の気持ち別に見る（教職員のみ）</summary>
+          <div style="overflow-x:auto"><table class="data-table ps-cross">
+            <thead><tr><th>項目</th>${stances.map(st => `<th>${escapeHtml(st)}<br><span class="ps-th-n">${sN(st)}人</span></th>`).join('')}</tr></thead>
+            <tbody>${picked.map(x => `<tr><td>${escapeHtml(x.label)}</td>${stances.map(st => { const v = cell(x.label, st); return `<td>${v ? `${v}<span class="ps-td-pct">${Math.round(v * 100 / sN(st))}%</span>` : ''}</td>`; }).join('')}</tr>`).join('')}</tbody>
+          </table></div>
+          <div class="ps-block-note">％は、その気持ちの人のうち選んだ人の割合</div>
+        </details>`;
+    }
   }
-  if (!open.length && !staff.length) return '';
 
-  // まとめ：それぞれの質問で一番多かった答え（同数は並べる）
-  const top = (m) => {
-    const e = Object.entries(m.counts || {});
-    if (!e.length) return '';
-    const max = e[0][1];
-    const names = e.filter(([, n]) => n === max).map(([l]) => `「${escapeHtml(l)}」`);
-    const pct = m.respondents ? Math.round(max * 100 / m.respondents) : 0;
-    return `${names.slice(0, 3).join('')}${names.length > 3 ? `ほか${names.length - 3}件` : ''} <span class="ps-sum-num">${max}人・${pct}%</span>`;
+  _psExports[exportName] = [['順位', '項目', '人数', '割合（%）'], ...ranked.map(x => [x.c > 0 ? x.rank : '', x.label, x.c, x.pct]),
+    [], ['回答した人数', n], ['1人あたりの選んだ数（平均）', avg]];
+
+  return {
+    n,
+    html: `
+      <div class="ps-rank-meta">回答${n}人・1人あたり平均${avg}個${howManyText ? `（${howManyText}）` : ''}　<span class="ps-hint">％＝回答者のうち選んだ人の割合</span></div>
+      <div class="ps-rank-list">${picked.map(rowHTML).join('') || '<div class="ps-empty">回答なし</div>'}</div>
+      ${zero.length ? `<div class="ps-zero-head">まだ誰も選んでいない項目（${zero.length}）</div><div class="ps-rank-list">${zero.map(rowHTML).join('')}</div>` : ''}
+      ${!conf.complete ? `<div class="ps-block-note ps-incomplete">※ 選択肢の一覧が未登録のため、選ばれた項目だけを表示しています</div>` : ''}
+      ${crossHTML}
+      <button class="btn btn-ghost btn-sm ps-dl" onclick="downloadPreSurveyCsv('${exportName}')">💾 この集計をCSVで保存</button>`,
+    top: picked.filter(x => x.rank === 1).map(x => x.label), topCount: picked.length ? picked[0].c : 0, topPct: picked.length ? picked[0].pct : 0,
   };
-  const sums = [
-    ['保護者が聞きたいこと', top(ps.parentTopics)],
-    [ps.childIsJhs ? '中学生本人が聞きたいこと' : 'お子さまが聞きたいこと', top(ps.childTopics)],
-  ];
-  if (window.IS_TEACHER) sums.push(['教員との面談で相談したいこと', top(ps.teacherConsult)], ['面談で聞きたいこと（分類）', top(ps.interviewTags)]);
-  const summary = sums.filter(([, v]) => v).map(([k, v]) => `<li><span class="ps-sum-label">${k}</span>${v}</li>`).join('');
+}
+
+function downloadPreSurveyCsv(name) {
+  const rows = _psExports[name];
+  if (!rows) return;
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// 在校生ブースで聞きたいこと（生徒ページにも表示）。申込状況タブの上の方に出す
+function buildPreSurveyHTML(rows, key) {
+  rows = rows.filter(r => !isTestSchoolName(r.school));
+  const event = EVENTS.find(e => e.key === key);
+  const type = rows.some(r => r._slot === 'jhs') ? 'jhs' : 'elm';
+  const hasField = f => rows.some(r => String(r[f] || '').trim());
+  if (!hasField('parent_topics') && !hasField('child_topics')) return '';
+  const evName = event ? event.label : '';
+  const childName = type === 'jhs' ? '中学生本人' : 'お子さま';
+
+  const blocks = [];
+  const tops = [];
+  const add = (field, title, who) => {
+    if (!hasField(field)) return;
+    const r = _psRankingHTML(rows, field, type, `在校生ブース_${who}_${evName}`);
+    blocks.push(_psBlock(title, '', r.html, 'ps-rank-block'));
+    if (r.top.length) tops.push(`<li><span class="ps-sum-label">${who}</span>${r.top.slice(0, 3).map(t => `「${escapeHtml(t)}」`).join('')}${r.top.length > 3 ? `ほか${r.top.length - 3}件` : ''} <span class="ps-sum-num">${r.topCount}人・${r.topPct}%</span></li>`);
+  };
+  // 中学生は本人が必須・保護者は任意なので本人を先に
+  if (type === 'jhs') {
+    add('child_topics', `🧑‍🎓 ${childName}が聞きたいこと`, childName);
+    add('parent_topics', '👪 保護者が聞きたいこと', '保護者');
+  } else {
+    add('parent_topics', '👪 保護者が聞きたいこと', '保護者');
+    add('child_topics', `🧒 ${childName}が聞いてみたいこと`, childName);
+  }
+
+  const ps = getPreSurvey(rows);
   const filler = Object.entries(ps.formFiller);
-  const fillerNote = filler.length ? `（入力した人：${filler.map(([k, n]) => `${escapeHtml(k)} ${n}人`).join('・')}）` : '';
+  const fillerNote = filler.length ? `（フォームを入力した人：${filler.map(([k, n]) => `${escapeHtml(k)} ${n}人`).join('・')}）` : '';
+  const interview = ps.interview.respondents
+    ? `<div class="ps-interview"><span class="ps-interview-label">💬 個別面談（約15分）の希望</span>${Object.entries(ps.interview.counts).map(([k, n]) => `<span class="ps-chip">${escapeHtml(k)} <strong>${n}</strong></span>`).join('')}</div>` : '';
 
   return `
     <div class="card pre-survey-card">
-      <div class="card-title">📝 申込時アンケート（参加者が知りたいこと）</div>
-      <div class="ps-lead">申込${ps.total}人の回答です。${fillerNote}</div>
-      ${summary ? `<div class="ps-summary"><div class="ps-summary-title">💡 いちばん多かった答え</div><ul>${summary}</ul></div>` : ''}
-      ${open.length ? `<div class="ps-grid">${open.join('')}</div>` : ''}
-      ${staff.length ? `
-        <div class="ps-staff">
-          <div class="ps-staff-head">🔒 ここから下は教職員だけに表示（生徒ページには出ません）</div>
-          <div class="ps-grid">${staff.join('')}</div>
-        </div>` : ''}
+      <div class="card-title">🙋 在校生ブースで聞きたいこと（申込時アンケート・3つまで選択）</div>
+      <div class="ps-lead">申込${ps.total}人の回答です。${fillerNote}ブースで話す内容の準備に使えます。</div>
+      ${tops.length ? `<div class="ps-summary"><div class="ps-summary-title">💡 いちばん多く選ばれた項目</div><ul>${tops.join('')}</ul></div>` : ''}
+      <div class="ps-grid ps-grid-wide">${blocks.join('')}</div>
+      ${interview}
+    </div>`;
+}
+
+// 申込時アンケートの教職員向けの分析（受験の気持ち・検討中の学校・面談の内容・塾）
+function buildPreSurveyStaffHTML(rows) {
+  if (!window.IS_TEACHER) return '';
+  const ps = getPreSurvey(rows);
+  const multiNote = r => `回答${r}人・複数選択（％は回答者のうち選んだ人の割合）`;
+  const singleNote = r => `回答${r}人`;
+  const staff = [];
+  if (ps.teacherConsult.respondents) staff.push(_psBlock('👩‍🏫 教員との面談で相談したい内容', multiNote(ps.teacherConsult.respondents),
+    _psBarsHTML(ps.teacherConsult.counts, ps.teacherConsult.respondents)));
+  if (ps.interviewTags.respondents || ps.interviewNone) staff.push(_psBlock('📋 個別面談で聞きたいこと（内容の分類）',
+    `記入${ps.interviewTags.respondents}人を内容で分類（1人が複数に当てはまることがあります）${ps.interviewNone ? `／「なし」など${ps.interviewNone}人` : ''}。個人的な相談を含むため、文章そのものは保存していません`,
+    ps.interviewTags.respondents ? _psBarsHTML(ps.interviewTags.counts, ps.interviewTags.respondents) : ''));
+  if (ps.examStance.respondents) staff.push(_psBlock('🎯 梅光の受験について、現時点の気持ち', singleNote(ps.examStance.respondents),
+    _psBarsHTML(ps.examStance.counts, ps.examStance.respondents, { sentiment: true })));
+  if (ps.otherSchools.respondents) staff.push(_psBlock('🏫 ほかに検討中の学校', multiNote(ps.otherSchools.respondents),
+    _psBarsHTML(ps.otherSchools.counts, ps.otherSchools.respondents) +
+    (ps.otherSchoolNotes.length ? `<div class="ps-notes"><span class="ps-notes-label">「その他」の記入：</span>${ps.otherSchoolNotes.map(t => `<span class="ps-chip">${escapeHtml(t)}</span>`).join('')}</div>` : '')));
+  const stances = Object.entries(ps.stanceBySchool).sort((a, b) => _sentimentScore(b[0]) - _sentimentScore(a[0]));
+  const schoolCols = Object.keys(ps.otherSchools.counts);
+  if (stances.length && schoolCols.length) staff.push(_psBlock('🔀 受験の気持ち別の「ほかに検討中の学校」', '数字は人数（1人が複数の学校を選ぶことがあります）', `
+    <div style="overflow-x:auto"><table class="data-table ps-cross">
+      <thead><tr><th>現時点の気持ち</th><th>人数</th>${schoolCols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+      <tbody>${stances.map(([st, m]) => `<tr><td>${escapeHtml(st)}</td><td>${m.n}</td>${schoolCols.map(c => `<td>${m.schools[c] || ''}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>`, 'ps-full'));
+  if (ps.crams.respondents) staff.push(_psBlock('📚 通っている塾', `記入${ps.crams.respondents}人（申込${ps.total}人のうち）。表記ゆれはそのまま表示しています`,
+    `<div class="ps-notes">${Object.entries(ps.crams.counts).map(([n, c]) => `<span class="ps-chip">${escapeHtml(n)} <strong>${c}</strong></span>`).join('')}</div>`));
+  if (!staff.length) return '';
+  return `
+    <div class="card pre-survey-card ps-staff-card">
+      <div class="card-title">🔒 申込時アンケートの分析（教職員のみ・生徒ページには出ません）</div>
+      <div class="ps-grid">${staff.join('')}</div>
     </div>`;
 }
 
