@@ -62,7 +62,6 @@ function _pastProgressCardHTML(event, rows) {
         <div class="progress-empty-text">データ未読込</div>
       </div>`;
   }
-  const attended = rows.filter(r => r.attended === '来場済み').length;
   const hasAttendance = rows.some(r => r.attended);
   const music = event.combined ? getMusicRows(event.key) : [];
   const vs = event.musicOnly ? { available: false } : getVisitorStats(event.key);
@@ -510,6 +509,7 @@ function buildBeforePanelHTML(key, rows = []) {
 
   return `
     ${breakdownCard}
+    ${buildInterviewCardHTML(rows)}
     ${buildPreSurveyHTML(rows, key)}
     <div class="card chart-row">
       <div class="chart-toolbar">
@@ -764,6 +764,49 @@ function downloadPreSurveyCsv(name) {
   URL.revokeObjectURL(url);
 }
 
+// 個別面談（在校生と／教員と／両方）・制服試着の申込状況（生徒ページにも表示。誰が対応するかの準備用）
+// 面談で聞きたいことの内容は表示しない
+function buildInterviewCardHTML(rows) {
+  rows = rows.filter(r => !isTestSchoolName(r.school));
+  const vals = rows.map(r => String(r.wants_consultation || '').trim());
+  if (!vals.some(v => /話したい|両方|希望しない/.test(v))) return '';
+  const student = vals.filter(v => v.includes('在校生')).length;
+  const teacher = vals.filter(v => v.includes('教員')).length;
+  const both    = vals.filter(v => v === '両方' || v.startsWith('両方')).length;
+  const none    = vals.filter(v => v.includes('希望しない')).length;
+  const total = student + teacher + both;
+  const opt = getOptionCounts(rows);
+  const uniform = opt.uniform.available ? opt.uniform.want : null;
+  const item = (label, n, cls, note) => `
+    <div class="iv-item ${cls}">
+      <div class="iv-item-label">${label}</div>
+      <div class="iv-item-num">${n}<span>件</span></div>
+      ${note ? `<div class="iv-item-note">${note}</div>` : ''}
+    </div>`;
+  return `
+    <div class="card interview-card">
+      <div class="card-title">💬 個別面談・👔 制服試着の申込状況</div>
+      <div class="iv-row">
+        <div class="iv-total">
+          <div class="iv-item-label">個別面談（約15分）の申込</div>
+          <div class="iv-total-num">${total}<span>件</span></div>
+          <div class="iv-item-note">申込${rows.length}人のうち（希望しない ${none}人）</div>
+        </div>
+        <div class="iv-items">
+          ${item('🧑‍🎓 在校生と話したい', student, 'student', '在校生が対応')}
+          ${item('👩‍🏫 教員と話したい', teacher, 'teacher', '教員が対応')}
+          ${item('🤝 両方', both, 'both', '教員と在校生が同時に対応')}
+        </div>
+      </div>
+      <div class="iv-staffing">
+        <span>在校生が入る面談：<strong>${student + both}件</strong>（在校生のみ ${student}・両方 ${both}）</span>
+        <span>教員が入る面談：<strong>${teacher + both}件</strong>（教員のみ ${teacher}・両方 ${both}）</span>
+      </div>
+      ${uniform !== null ? `<div class="iv-uniform">👔 制服試着の申込：<strong>${uniform}人</strong></div>` : ''}
+      <div class="iv-foot">申込時点の件数です。面談で聞きたいことの内容は表示していません。</div>
+    </div>`;
+}
+
 // 在校生ブースで聞きたいこと（生徒ページにも表示）。申込状況タブの上の方に出す
 function buildPreSurveyHTML(rows, key) {
   rows = rows.filter(r => !isTestSchoolName(r.school));
@@ -794,8 +837,6 @@ function buildPreSurveyHTML(rows, key) {
   const ps = getPreSurvey(rows);
   const filler = Object.entries(ps.formFiller);
   const fillerNote = filler.length ? `（フォームを入力した人：${filler.map(([k, n]) => `${escapeHtml(k)} ${n}人`).join('・')}）` : '';
-  const interview = ps.interview.respondents
-    ? `<div class="ps-interview"><span class="ps-interview-label">💬 個別面談（約15分）の希望</span>${Object.entries(ps.interview.counts).map(([k, n]) => `<span class="ps-chip">${escapeHtml(k)} <strong>${n}</strong></span>`).join('')}</div>` : '';
 
   return `
     <div class="card pre-survey-card">
@@ -803,7 +844,6 @@ function buildPreSurveyHTML(rows, key) {
       <div class="ps-lead">申込${ps.total}人の回答です。${fillerNote}ブースで話す内容の準備に使えます。</div>
       ${tops.length ? `<div class="ps-summary"><div class="ps-summary-title">💡 いちばん多く選ばれた項目</div><ul>${tops.join('')}</ul></div>` : ''}
       <div class="ps-grid ps-grid-wide">${blocks.join('')}</div>
-      ${interview}
     </div>`;
 }
 
