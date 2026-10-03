@@ -121,6 +121,12 @@ function normalizeRow(raw, year = new Date().getFullYear()) {
     }
   }
 
+  // 申込上限に達して受付を終了したか（BLENDで質問文が「…上限に達したため終了しました」に変わる）。
+  // 終了後の申込者は「キャンセル待ちする／しない」を選ぶ。終了前の回答は 1（はい）/ 2（いいえ）の数字で残る
+  const closedCol = test => Object.keys(raw).some(k => test(k) && (k.includes('終了') || k.includes('上限')));
+  row.uniform_closed = closedCol(k => k.includes('試着')) ? '1' : '';
+  row.consult_closed = closedCol(k => (k.includes('面談') || k.includes('相談')) && !k.includes('聞きたい') && !k.includes('内容')) ? '1' : '';
+
   // ===== 申込時アンケート（11月の説明会〜）：列名のキーワードで検出 =====
   const findCol = test => Object.keys(raw).find(test);
   const colVal = k => (k && raw[k] != null ? String(raw[k]).trim() : '');

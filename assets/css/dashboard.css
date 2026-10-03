@@ -1164,3 +1164,11 @@ body.view-only .admin-only { display: none !important; }
   .iv-item-num { font-size: var(--text-2xl); }
   .iv-item-label { font-size: var(--text-xs); }
 }
+
+.iv-closed { margin-top: var(--space-3); border: 1px solid #F0DFA8; background: var(--color-gold-soft); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.iv-closed-head { font-weight: 700; display: flex; align-items: center; gap: var(--space-2); }
+.iv-closed-badge { font-size: var(--text-xs); background: var(--color-danger); color: #fff; border-radius: var(--radius-full); padding: 1px 8px; }
+.iv-closed-items { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: var(--space-2) 0 var(--space-1); font-size: var(--text-sm); align-items: baseline; }
+.iv-closed-items strong { font-size: var(--text-xl); color: var(--color-primary); }
+.iv-wait strong { color: var(--color-danger) !important; }
+.iv-nowait { color: var(--color-gray-500); }

@@ -473,6 +473,8 @@ function _parseWants(val) {
   if (val === null || val === undefined || val === '') return null;
   const v = String(val).trim();
   if (!v) return null;
+  // 受付終了後：「キャンセル待ちしない」は不要、「キャンセル待ちする」などはキャンセル待ち
+  if (v.includes('キャンセル待ち')) return /しない|希望しない|不要/.test(v) ? 'declined' : 'waitlist';
   if (v === '1' || v === 'はい' || v.startsWith('はい')) return 'want';
   if (v.includes('希望しない')) return 'declined';                        // 11月の説明会：個別面談
   if (v.includes('話したい') || v === '両方') return 'want';              // 在校生と／教員と話したい・両方
@@ -492,9 +494,13 @@ function getOptionCounts(rows) {
     const c = _parseWants(r.wants_consultation);
     if (c !== null) { cTotal++; if (c === 'want') cWant++; else if (c === 'waitlist') cWaitlist++; }
   }
+  // 受付終了後に申し込んだ人（キャンセル待ちする／しない を選んだ人）
+  const afterClose = field => rows.filter(r => String(r[field] || '').includes('キャンセル待ち')).length;
   return {
-    uniform: { want: uWant, waitlist: uWaitlist, total: uTotal, available: uTotal > 0 },
-    consult: { want: cWant, waitlist: cWaitlist, total: cTotal, available: cTotal > 0 },
+    uniform: { want: uWant, waitlist: uWaitlist, total: uTotal, available: uTotal > 0,
+               closed: rows.some(r => r.uniform_closed === '1') || afterClose('wants_uniform') > 0, afterClose: afterClose('wants_uniform') },
+    consult: { want: cWant, waitlist: cWaitlist, total: cTotal, available: cTotal > 0,
+               closed: rows.some(r => r.consult_closed === '1') || afterClose('wants_consultation') > 0, afterClose: afterClose('wants_consultation') },
   };
 }
 

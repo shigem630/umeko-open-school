@@ -397,7 +397,7 @@ function buildBeforePanelHTML(key, rows = []) {
     if (!jhsAvail && !elmAvail) return '';
     const wantRow = `
       <div class="breakdown-option-row">
-        <span class="breakdown-option-label">${label}</span>
+        <span class="breakdown-option-label">${label}${(jhsAvail && jhs.closed) || (elmAvail && elm.closed) ? '<span class="iv-closed-badge" style="margin-left:4px">受付終了</span>' : ''}</span>
         ${jhsAvail ? `<span class="breakdown-option-jhs">${firstLabel} ${jhs.want}人</span>` : ''}
         ${elmAvail ? `<span class="breakdown-option-elm">小学生 ${elm.want}人</span>` : ''}
       </div>`;
@@ -410,8 +410,8 @@ function buildBeforePanelHTML(key, rows = []) {
       </div>` : '';
     return wantRow + waitRow;
   }
-  const uniformRow = optionRow('👔 制服試着申込', '次回試着希望', jhsOpt.uniform, elmOpt ? elmOpt.uniform : null);
-  const consultRow = optionRow('💬 個別相談申込', '定員超過・次回希望', jhsOpt.consult, elmOpt ? elmOpt.consult : null);
+  const uniformRow = optionRow('👔 制服試着申込', 'キャンセル待ち・次回希望', jhsOpt.uniform, elmOpt ? elmOpt.uniform : null);
+  const consultRow = optionRow('💬 個別相談申込', 'キャンセル待ち・次回希望', jhsOpt.consult, elmOpt ? elmOpt.consult : null);
 
   const musicSummary = isCombined ? getMusicSummary(key) : null;
   const musicHc = musicSummary ? musicSummary.headcount : null;
@@ -776,6 +776,17 @@ function buildInterviewCardHTML(rows) {
   const none    = vals.filter(v => v.includes('希望しない')).length;
   const total = student + teacher + both;
   const opt = getOptionCounts(rows);
+  // 受付終了の表示（制服試着・個別面談）：申込済み・キャンセル待ち・キャンセル待ちしない
+  const closedHTML = (icon, name, o, unit) => `
+    <div class="iv-closed">
+      <div class="iv-closed-head">${icon} ${name}<span class="iv-closed-badge">受付終了</span></div>
+      <div class="iv-closed-items">
+        <span>申込済み <strong>${o.want}${unit}</strong></span>
+        <span class="iv-wait">キャンセル待ち <strong>${o.waitlist}人</strong></span>
+        <span class="iv-nowait">キャンセル待ちしない ${o.afterClose - o.waitlist}人</span>
+      </div>
+      <div class="iv-item-note">受付終了後の申込者 ${o.afterClose}人のうち、キャンセル待ちを希望した人数です</div>
+    </div>`;
   const uniform = opt.uniform.available ? opt.uniform.want : null;
   const item = (label, n, cls, note) => `
     <div class="iv-item ${cls}">
@@ -802,7 +813,9 @@ function buildInterviewCardHTML(rows) {
         <span>在校生が入る面談：<strong>${student + both}件</strong>（在校生のみ ${student}・両方 ${both}）</span>
         <span>教員が入る面談：<strong>${teacher + both}件</strong>（教員のみ ${teacher}・両方 ${both}）</span>
       </div>
-      ${uniform !== null ? `<div class="iv-uniform">👔 制服試着の申込：<strong>${uniform}人</strong></div>` : ''}
+      ${opt.consult.closed ? closedHTML('💬', '個別面談', opt.consult, '件') : ''}
+      ${uniform === null ? '' : opt.uniform.closed ? closedHTML('👔', '制服試着', opt.uniform, '人')
+        : `<div class="iv-uniform">👔 制服試着の申込：<strong>${uniform}人</strong>${opt.uniform.waitlist ? `　キャンセル待ち <strong>${opt.uniform.waitlist}人</strong>` : ''}</div>`}
       <div class="iv-foot">申込時点の件数です。面談で聞きたいことの内容は表示していません。</div>
     </div>`;
 }
