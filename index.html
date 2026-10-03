@@ -117,6 +117,7 @@
 
 <!-- App scripts (order matters - dependencies first) -->
 <script src="assets/js/config.js"></script>
+<script src="assets/js/analytics.js"></script>
 <script src="assets/js/storage.js"></script>
 <script src="assets/js/csv-parser.js"></script>
 <script src="assets/js/data-processor.js"></script>
@@ -141,6 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // data.json not found — local dev or not yet published; localStorage fallback
   }
 
+  trackPageView('student', 'student');
   renderProgressCards('student');
   initEventTabs();
   renderSchoolTotals('jhs');

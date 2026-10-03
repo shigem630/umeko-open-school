@@ -187,6 +187,19 @@
       </div>
     </section>
 
+    <!-- Section 3.8: アクセス状況（管理者のみ）-->
+    <section class="school-map-section admin-only">
+      <div class="section-header st-header">
+        <div>
+          <h2 class="section-title">📈 アクセス状況（管理者のみ）</h2>
+          <p class="section-subtitle">生徒・保護者向けページと教職員（閲覧用）がどれくらい見ているか</p>
+        </div>
+      </div>
+      <div class="card">
+        <div id="analytics-body"></div>
+      </div>
+    </section>
+
     <!-- Section 4: Settings -->
     <section class="settings-panel card admin-only">
       <div class="section-header">
@@ -293,6 +306,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <script src="assets/js/config.js"></script>
+<script src="assets/js/analytics.js"></script>
 <script src="assets/js/storage.js"></script>
 <script src="assets/js/csv-parser.js"></script>
 <script src="assets/js/data-processor.js"></script>
@@ -320,6 +334,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.toggle('view-only', !window.IS_ADMIN);
   if (!window.IS_ADMIN) document.getElementById('header-role-badge').textContent = '👀 閲覧専用';
   document.getElementById('main-content').style.display = 'block';
+
+  // アクセス解析：管理者の端末は数えない（この端末で生徒ページを見ても数えない）。閲覧用（教職員）は数える
+  if (window.IS_ADMIN) markAnalyticsSelf();
+  else trackPageView('teacher', 'staff');
 
   // 複数PC対応: 開いたときにGitHubの最新公開データを取り込む（別PCの更新も反映）
   const synced = await syncFromGitHubIfNewer();
@@ -358,6 +376,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupExamUpload();
   renderExamSection();
   initPublishUI();
+  renderAnalyticsPanel();
 });
 
 // CSVを読み込んだあとの再表示

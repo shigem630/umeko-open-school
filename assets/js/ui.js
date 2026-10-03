@@ -295,6 +295,12 @@ function switchEvent(key) {
 
   // Render the detail panel for this event
   renderEventPanel(key);
+
+  // アクセス解析：どの回のタブが見られたか
+  if (typeof trackEventTab === 'function') {
+    const ev = EVENTS.find(e => e.key === key);
+    if (ev) trackEventTab(ev.label);
+  }
 }
 
 // ===== PHASE TABS (Phase 7-5: called once, reads currentEventKey at click time) =====

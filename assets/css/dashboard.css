@@ -1172,3 +1172,22 @@ body.view-only .admin-only { display: none !important; }
 .iv-closed-items strong { font-size: var(--text-xl); color: var(--color-primary); }
 .iv-wait strong { color: var(--color-danger) !important; }
 .iv-nowait { color: var(--color-gray-500); }
+
+/* ===== アクセス状況（管理者のみ） ===== */
+.an-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.an-tile { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.an-tile-label { font-size: var(--text-sm); font-weight: 700; color: var(--color-gray-700); }
+.an-tile-main { font-size: var(--text-3xl); font-weight: 700; color: var(--color-primary); line-height: 1.2; }
+.an-tile-main span { font-size: var(--text-sm); font-weight: 400; margin-left: 2px; color: var(--color-gray-500); }
+.an-tile-sub { font-size: var(--text-sm); }
+.an-tile-sub.staff { color: var(--color-gray-500); font-size: var(--text-xs); }
+.an-note { font-size: var(--text-xs); color: var(--color-gray-500); margin: var(--space-2) 0; }
+.an-chart-block { margin-top: var(--space-5); }
+.an-chart-title { font-weight: 700; font-size: var(--text-sm); margin-bottom: var(--space-2); }
+.an-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+.an-key-form label { display: block; font-size: var(--text-sm); margin-bottom: var(--space-2); }
+.an-key-row { display: flex; gap: var(--space-2); max-width: 420px; }
+@media (max-width: 640px) {
+  .an-tiles { grid-template-columns: 1fr; }
+  .an-grid { grid-template-columns: 1fr; }
+}
