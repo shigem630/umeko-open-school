@@ -370,6 +370,6 @@ const EXAM_SHARE_SALT = 'umeko-open-school/exam-share/v1';
 const STAFF_PASSWORD_HASH = '048a63ab42c37ffb53884da275d79be059a9868928564def0c6836cd4fd671af';
 
 // アクセス解析の記録先（先生のGoogleスプレッドシートの Apps Script のウェブアプリURL）。空ならアクセス解析はしない
-const ANALYTICS_URL = '';
+const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbyaVAP7WkFjHT-CtJF2Kxyh38YE7Gxcx64yrqDkAe8PwgOjqAW33EpHO1m0V6lvDfFR/exec';
 
 const APP_VERSION = '1.0';
