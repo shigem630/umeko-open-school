@@ -43,6 +43,7 @@ function _ensureProgressCards() {
       <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
     </div>`).join('');
   grid.dataset.year = String(ACTIVE_YEAR);
+  grid.dataset.count = String(EVENTS.length);  // 5回の年度はカードを横1列に並べる（dashboard.css）
 }
 
 // 過去の年度のカード：目標・ペースは出さず、申込数と来場数を表示
@@ -94,6 +95,15 @@ function _onlineBadge(event) {
   return event.online ? '<span class="progress-online">💻 オンライン</span>' : '';
 }
 
+// 対象（中学生／小学生）の目印。音楽科の枠は数えない
+function _audienceTags(event) {
+  const types = new Set(event.csvSlots.map(s => s.type).filter(t => t !== 'music'));
+  const jhs = types.has('jhs'), elm = types.has('elm');
+  if (!jhs && !elm) return '';
+  const only = jhs && elm ? '' : 'のみ';
+  return `<div class="progress-audience">${jhs ? `<span class="aud-jhs">中学生${only}</span>` : ''}${elm ? `<span class="aud-elm">小学生${only}</span>` : ''}</div>`;
+}
+
 function renderProgressCards(role) {
   const config = getConfig();
   _ensureProgressCards();
@@ -143,6 +153,7 @@ function renderProgressCards(role) {
         <div class="progress-card-header">
           <div>
             <div class="progress-event-date">${event.label}${_onlineBadge(event)}</div>
+          ${_audienceTags(event)}
           </div>
         </div>
         <div class="progress-empty">
@@ -162,6 +173,7 @@ function renderProgressCards(role) {
       <div class="progress-card-header">
         <div>
           <div class="progress-event-date">${event.label}${_onlineBadge(event)}</div>
+          ${_audienceTags(event)}
         </div>
         <div class="progress-delta${delta === 0 ? ' zero' : ''}">
           ${delta > 0 ? '+' : ''}${delta}人

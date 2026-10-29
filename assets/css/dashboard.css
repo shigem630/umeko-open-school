@@ -1073,7 +1073,7 @@ body.view-only .admin-only { display: none !important; }
   border-radius: 999px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px;
 }
 .progress-online {
-  font-size: 10px; font-weight: 700; color: #0B4F8A; background: #E3F0FC;
+  font-size: 10px; font-weight: 700; color: var(--color-gray-700); background: var(--color-gray-100);
   border-radius: 999px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px;
 }
 .breakdown-music { background: var(--color-gray-100); color: var(--color-gray-700); padding: 1px 6px; border-radius: 999px; }
@@ -1194,4 +1194,23 @@ body.view-only .admin-only { display: none !important; }
 @media (max-width: 640px) {
   .an-tiles { grid-template-columns: 1fr; }
   .an-grid { grid-template-columns: 1fr; }
+}
+
+/* 回の対象（中学生／小学生）。色は内訳バッジと同じ（中学生＝青、小学生＝緑） */
+.progress-audience { display: flex; gap: 4px; margin-top: 4px; }
+.progress-audience span {
+  font-size: var(--text-xs); font-weight: 700; padding: 1px 8px; border-radius: 999px; white-space: nowrap;
+}
+.progress-audience .aud-jhs { background: var(--color-info-soft); color: var(--color-info); }
+.progress-audience .aud-elm { background: var(--color-elm-soft); color: var(--color-elm); }
+
+/* ===== 回が5つの年度：カードを横1列に収める（2026-10-29 追加。元に戻すときはこのブロックと ui.js の dataset.count を消す）===== */
+@media (min-width: 1025px) {
+  .progress-grid[data-count="5"] {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .progress-grid[data-count="5"] .progress-card { padding: var(--space-4); }
+  .progress-grid[data-count="5"] .progress-current { font-size: var(--text-3xl); }
+  .progress-grid[data-count="5"] .headcount-sub { display: block; margin-left: 0; }
 }
