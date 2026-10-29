@@ -62,7 +62,8 @@ function _pastProgressCardHTML(event, rows) {
         <div class="progress-empty-text">データ未読込</div>
       </div>`;
   }
-  const hasAttendance = rows.some(r => r.attended);
+  const hasAttendance = hasAttendanceRecord(event, rows);
+  const attended = rows.filter(r => r.attended === '来場済み').length;
   const music = event.combined ? getMusicRows(event.key) : [];
   const vs = event.musicOnly ? { available: false } : getVisitorStats(event.key);
   const importInfo = getEventImportInfo(event.key);
@@ -86,6 +87,11 @@ function _pastProgressCardHTML(event, rows) {
       </div>` : ''}
     ${hasAttendance ? `<div class="progress-rate">来場 <strong>${attended}人</strong>（来場率 ${Math.round(attended * 100 / rows.length)}%）</div>` : ''}
     <div class="progress-updated">${importInfo ? `読込: ${formatDatetimeDisplay(importInfo.latest_at)}` : ''}</div>`;
+}
+
+// オンライン開催の回の目印
+function _onlineBadge(event) {
+  return event.online ? '<span class="progress-online">💻 オンライン</span>' : '';
 }
 
 function renderProgressCards(role) {
@@ -136,7 +142,7 @@ function renderProgressCards(role) {
       card.innerHTML = `
         <div class="progress-card-header">
           <div>
-            <div class="progress-event-date">${event.label}</div>
+            <div class="progress-event-date">${event.label}${_onlineBadge(event)}</div>
           </div>
         </div>
         <div class="progress-empty">
@@ -155,7 +161,7 @@ function renderProgressCards(role) {
     card.innerHTML = `
       <div class="progress-card-header">
         <div>
-          <div class="progress-event-date">${event.label}</div>
+          <div class="progress-event-date">${event.label}${_onlineBadge(event)}</div>
         </div>
         <div class="progress-delta${delta === 0 ? ' zero' : ''}">
           ${delta > 0 ? '+' : ''}${delta}人
@@ -191,8 +197,8 @@ function renderProgressCards(role) {
         <div class="progress-pace" style="background:var(--color-gold-soft);color:var(--color-gold)">🎉 目標達成！</div>
       ` : ''}
       <div class="progress-headcount">
-        来場見込み <strong>${hc.total}人</strong>
-        <span class="headcount-sub">（申込${hc.students}＋保護者等${hc.guardians}）</span>
+        ${event.online ? `Zoom参加予定 <strong>${hc.students}人</strong>` : `来場見込み <strong>${hc.total}人</strong>
+        <span class="headcount-sub">（申込${hc.students}＋保護者等${hc.guardians}）</span>`}
       </div>
       <div class="progress-updated">${updatedStr ? `最終更新: ${updatedStr}` : ''}</div>
     `;
@@ -262,7 +268,7 @@ function initEventTabs() {
 
   if (tabNav) {
     tabNav.innerHTML = EVENTS.map(e =>
-      `<button class="tab-btn event-tab-btn" data-key="${e.key}" onclick="switchEvent('${e.key}')">${escapeHtml(e.label)}</button>`
+      `<button class="tab-btn event-tab-btn" data-key="${e.key}" onclick="switchEvent('${e.key}')">${escapeHtml(e.label)}${e.online ? ' 💻' : ''}</button>`
     ).join('');
   }
   if (dropdown) {
@@ -446,6 +452,12 @@ function buildBeforePanelHTML(key, rows = []) {
         <span class="breakdown-hc-detail"></span>
         <span class="breakdown-hc-value total">${hc.total + (musicHc ? musicHc.total : 0)}人</span>
       </div>
+    </div>
+  ` : event && event.online ? `
+    <div class="breakdown-headcount-row">
+      <span class="breakdown-headcount-label">Zoom参加予定</span>
+      <span class="breakdown-headcount-value">${hc.students}人</span>
+      <span class="breakdown-headcount-sub">（オンライン開催・来校なし）</span>
     </div>
   ` : `
     <div class="breakdown-headcount-row">

@@ -82,7 +82,7 @@ function _schoolAttendance(type, grade) {
       if (slot.type !== type) continue;
       const data = getEventData(slot.id);
       if (!data || !data.rows) continue;
-      const hasAttendance = data.rows.some(r => r.attended);
+      const hasAttendance = hasAttendanceRecord(event, data.rows);
       for (const r of data.rows) {
         const school = canonicalSchoolName(r.school);
         if (!school || isTestSchoolName(school)) continue;

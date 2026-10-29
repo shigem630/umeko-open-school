@@ -47,6 +47,20 @@ const EVENTS_BY_YEAR = {
       defaultGoal: 60
     },
     {
+      // Zoomで開催（来校なし）。保護者等の人数は申込項目に無い
+      key:      '1111',
+      label:    '11月11日',
+      fullLabel:'オンラインオープンスクール（11/11 中学生）',
+      uploadTitle: '11月11日（オンライン・中学生のみ）',
+      date:     '2026-11-11',
+      csvSlots: [
+        { id: '1111_jhs', label: '中学生CSV（オンライン）', uploadLabel: '中学生CSV（オンライン）', type: 'jhs' }
+      ],
+      combined: false,
+      online: true,
+      defaultGoal: 20
+    },
+    {
       key:      '1128',
       label:    '11月28日',
       fullLabel:'第4回オープンスクール（11/28 中学生）',
@@ -133,6 +147,13 @@ function setActiveYear(year) {
 
 function isPastYear() {
   return ACTIVE_YEAR !== CURRENT_YEAR;
+}
+
+// 「来場」列で出欠を付けているか。オンラインの回は来場済みが1人もいなければ出欠未入力とみなす
+// （Zoom参加者に「来場済み」を付けないと、開催後に全員キャンセル扱いになるのを防ぐ）
+function hasAttendanceRecord(event, rows) {
+  if (!rows.some(r => r.attended)) return false;
+  return !(event && event.online) || rows.some(r => r.attended === '来場済み');
 }
 
 // すべての年度から、スロットIDでイベントを探す

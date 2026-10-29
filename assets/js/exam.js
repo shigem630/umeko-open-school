@@ -446,7 +446,7 @@ function _cohortEvents(side, fiscal) {
     const d = getEventData(s.id);
     if (!d || !d.rows || !d.rows.length) return;
     if (s.file) covered.add(normEventFileName(s.file));
-    const hasAttendance = d.rows.some(r => r.attended);
+    const hasAttendance = hasAttendanceRecord(ev, d.rows);
     const held = ev.date <= today;
     events.push({
       name: s.type === 'music' ? `${ev.musicLabel || '音楽科体験レッスン会'}（${ev.label}）` : ev.fullLabel,

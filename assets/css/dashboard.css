@@ -1072,6 +1072,10 @@ body.view-only .admin-only { display: none !important; }
   font-size: 10px; font-weight: 700; color: #6B5200; background: #FFF1C2;
   border-radius: 999px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px;
 }
+.progress-online {
+  font-size: 10px; font-weight: 700; color: #0B4F8A; background: #E3F0FC;
+  border-radius: 999px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px;
+}
 .breakdown-music { background: var(--color-gray-100); color: var(--color-gray-700); padding: 1px 6px; border-radius: 999px; }
 .upload-year-note {
   font-size: var(--text-sm); color: #6B5200; background: #FFF8E1; border: 1px solid #F3D98B;
