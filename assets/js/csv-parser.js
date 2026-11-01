@@ -35,11 +35,11 @@ function parseCSVFile(file, slotId, onSuccess, onError) {
           const isMusicCsv = headers.some(h => h.startsWith('専攻') || h.includes('楽器名'));
           const isMusicSlot = /_music$/.test(slotId);
           if (isMusicSlot && !isMusicCsv) {
-            onError('音楽科体験レッスン会のCSVではないようです（「専攻、楽器名」の列がありません）。ファイルをご確認ください。');
+            onError('音楽科のCSVではないようです（「専攻、楽器名」の列がありません）。ファイルをご確認ください。');
             return;
           }
           if (!isMusicSlot && isMusicCsv) {
-            onError('音楽科体験レッスン会のCSVです。「音楽科CSV」の欄にアップロードしてください。');
+            onError('音楽科のCSVです。「音楽科CSV」の欄にアップロードしてください。');
             return;
           }
 

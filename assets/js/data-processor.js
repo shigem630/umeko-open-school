@@ -390,6 +390,8 @@ function getMusicSummary(eventKey) {
     grades:   countBy(r => r.grade),
     channels: countBy(r => r.channel ? (CHANNEL_ALIASES[r.channel] || r.channel) : ''),
     schools:  countBy(r => r.school),
+    hasSolfege: rows.some(r => r.wants_solfege),     // 受験講習会のCSVにはソルフェージュ・同日OSの列がない
+    hasGeneralOs: rows.some(r => r.joins_general_os),
     solfege:  wantCount('wants_solfege'),
     consult:  wantCount('wants_consultation'),
     generalOs: wantCount('joins_general_os'),
@@ -399,6 +401,31 @@ function getMusicSummary(eventKey) {
     attended: rows.filter(r => r.attended === '来場済み').length,
     overlapWithOs: new Set(withId.filter(r => osIds.has(r.plusseed_id)).map(r => r.plusseed_id)).size,
   };
+}
+
+// 音楽科の行事の一覧（表示中の年度）。普通科とは別に、行事ごとの申込・参加人数を出す
+function getMusicEventsOverview() {
+  const today = _todayStr();
+  const ids = new Set();
+  const items = [];
+  for (const event of EVENTS) {
+    const slots = event.csvSlots.filter(s => s.type === 'music');
+    if (!slots.length) continue;
+    const rows = getMusicRows(event.key);
+    const summary = rows.length ? getMusicSummary(event.key) : null;
+    rows.forEach(r => { if (r.plusseed_id) ids.add(r.plusseed_id); });
+    items.push({
+      event,
+      name: event.musicLabel || '音楽科体験レッスン会',
+      loaded: slots.some(s => getEventData(s.id)),
+      held: event.date <= today,
+      applied: rows.length,
+      attended: event.date <= today && hasAttendanceRecord(event, rows) ? rows.filter(r => r.attended === '来場済み').length : null,
+      newcomers: summary && summary.visitorAvailable ? summary.newcomers : null,
+      returning: summary && summary.visitorAvailable ? summary.returning : null,
+    });
+  }
+  return { items, uniqueApplicants: ids.size };
 }
 
 // Calculate required daily pace to reach goal
@@ -423,6 +450,7 @@ function getVisitorStats(eventKey) {
   const currentRows = getEventRows(eventKey);
   const previousIds = new Set();
   for (let i = 0; i < eventIdx; i++) {
+    if (EVENTS[i].musicOnly) continue;  // 普通科の新規・再訪は普通科の回だけで判定する
     getEventRows(EVENTS[i].key).forEach(r => {
       if (r.plusseed_id) previousIds.add(r.plusseed_id);
     });

@@ -1214,3 +1214,21 @@ body.view-only .admin-only { display: none !important; }
   .progress-grid[data-count="5"] .progress-current { font-size: var(--text-3xl); }
   .progress-grid[data-count="5"] .headcount-sub { display: block; margin-left: 0; }
 }
+
+/* ===== 音楽科の行事（普通科とは別の欄）===== */
+.music-summary-card { margin-top: calc(-1 * var(--space-4)); margin-bottom: var(--space-8); }
+.ms-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.ms-title { font-weight: 700; color: var(--color-gray-900); }
+.ms-total { font-size: var(--text-sm); color: var(--color-gray-700); }
+.ms-total strong { font-size: var(--text-xl); color: var(--color-primary); margin: 0 2px; }
+.ms-note { font-size: var(--text-xs); color: var(--color-gray-500); margin: 4px 0 var(--space-3); }
+.ms-muted { color: var(--color-gray-400); font-size: var(--text-xs); }
+.ms-table-wrap { overflow-x: auto; }
+.ms-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.ms-table th { text-align: left; font-size: var(--text-xs); color: var(--color-gray-500); font-weight: 600; padding: 4px 8px; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.ms-table td { padding: 8px; border-bottom: 1px solid var(--color-gray-100); white-space: nowrap; }
+.ms-table td strong { font-size: var(--text-lg); margin-right: 2px; }
+.ms-row { cursor: pointer; }
+.ms-row:hover { background: var(--color-gray-50, #FAFAFA); }
+.ms-date { color: var(--color-primary); font-weight: 700; }
+.ms-sub { font-size: var(--text-xs); color: var(--color-gray-600); }

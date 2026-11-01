@@ -38,12 +38,13 @@ function _ensureProgressCards() {
   const grid = document.getElementById('progress-grid');
   if (!grid || grid.dataset.year === String(ACTIVE_YEAR)) return;
   const click = window.IS_TEACHER ? 'handleCardClick' : 'switchEvent';
-  grid.innerHTML = EVENTS.map(e => `
+  const cardEvents = EVENTS.filter(e => !e.musicOnly);  // 音楽科だけの回は「🎹 音楽科」の欄に出す
+  grid.innerHTML = cardEvents.map(e => `
     <div id="card-${e.key}" class="progress-card" onclick="${click}('${e.key}')">
       <div class="progress-empty"><div class="progress-empty-icon">📋</div><div class="progress-empty-text">読込中…</div></div>
     </div>`).join('');
   grid.dataset.year = String(ACTIVE_YEAR);
-  grid.dataset.count = String(EVENTS.length);  // 5回の年度はカードを横1列に並べる（dashboard.css）
+  grid.dataset.count = String(cardEvents.length);  // 5回の年度はカードを横1列に並べる（dashboard.css）
 }
 
 // 過去の年度のカード：目標・ペースは出さず、申込数と来場数を表示
@@ -216,6 +217,45 @@ function renderProgressCards(role) {
     `;
   });
   renderNewVisitorSummary();
+  renderMusicSummary();
+}
+
+// ===== 音楽科の行事（普通科とは別に集計）=====
+function renderMusicSummary() {
+  const el = document.getElementById('music-summary');
+  if (!el) return;
+  const { items, uniqueApplicants } = getMusicEventsOverview();
+  if (!items.some(i => i.loaded)) { el.innerHTML = ''; return; }
+  const num = (v, unit = '人') => v == null ? '<span class="ms-muted">－</span>' : `<strong>${v}</strong>${unit}`;
+  const rowsHTML = items.map(i => {
+    const click = `onclick="${window.IS_TEACHER ? 'handleCardClick' : 'switchEvent'}('${i.event.key}')"`;
+    const attended = !i.loaded ? '' : i.attended != null ? num(i.attended)
+      : i.held ? '<span class="ms-muted">出欠未入力</span>' : '<span class="ms-muted">開催前</span>';
+    return `
+      <tr class="ms-row" ${click}>
+        <td class="ms-date">${escapeHtml(i.event.label)}</td>
+        <td class="ms-name">${escapeHtml(i.name)}</td>
+        ${i.loaded ? `
+          <td>${num(i.applied)}</td>
+          <td>${attended}</td>
+          <td class="ms-sub">${i.newcomers != null ? `新規 ${i.newcomers}・再訪 ${i.returning}` : ''}</td>`
+        : `<td colspan="3" class="ms-muted">データ未読込</td>`}
+      </tr>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="card music-summary-card">
+      <div class="ms-header">
+        <div class="ms-title">🎹 音楽科の行事</div>
+        <div class="ms-total">申込した人 合計 <strong>${uniqueApplicants}</strong>人<span class="ms-muted">（複数回の申込は1人）</span></div>
+      </div>
+      <div class="ms-note">普通科のカード・目標・新規来校者の人数には含めていません。行をクリックすると詳しい内訳を表示します。</div>
+      <div class="ms-table-wrap">
+        <table class="ms-table">
+          <thead><tr><th>日付</th><th>行事</th><th>申込</th><th>参加（来場済み）</th><th>初参加／再訪</th></tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 // ===== 新規来校者累計カード =====
@@ -280,7 +320,7 @@ function initEventTabs() {
 
   if (tabNav) {
     tabNav.innerHTML = EVENTS.map(e =>
-      `<button class="tab-btn event-tab-btn" data-key="${e.key}" onclick="switchEvent('${e.key}')">${escapeHtml(e.label)}${e.online ? ' 💻' : ''}</button>`
+      `<button class="tab-btn event-tab-btn" data-key="${e.key}" onclick="switchEvent('${e.key}')">${escapeHtml(e.label)}${e.online ? ' 💻' : ''}${e.musicOnly ? ' 🎹' : ''}</button>`
     ).join('');
   }
   if (dropdown) {
@@ -400,7 +440,9 @@ function buildBeforePanelHTML(key, rows = []) {
   const hc    = getHeadcount(rows);
   const jhsHc = isCombined ? getHeadcount(jhsRows) : null;
   const elmHc = isCombined ? getHeadcount(elmRows) : null;
-  const vs = getVisitorStats(key);
+  // 音楽科だけの回は、音楽科の内訳と同じ判定（普通科・音楽科の過去の行事すべてと照合）
+  const ms = event && event.musicOnly ? getMusicSummary(key) : null;
+  const vs = ms ? { available: ms.visitorAvailable, newCount: ms.newcomers, returningCount: ms.returning } : getVisitorStats(key);
 
   const visitorRow = vs.available ? `
     <div class="breakdown-visitor-row">
@@ -954,9 +996,9 @@ function buildMusicDetailsHTML(m, label = '音楽科体験レッスン会') {
         ${item('専攻・楽器', chips(m.majors))}
         ${item('学年', chips(m.grades))}
         ${item('希望・参加', `
-          <span class="music-chip">ソルフェージュ希望 ${m.solfege}</span>
-          <span class="music-chip">個別面談希望 ${m.consult}</span>
-          <span class="music-chip">同日の普通科OSにも参加 ${m.generalOs}</span>`)}
+          ${m.hasSolfege ? `<span class="music-chip">ソルフェージュ希望 ${m.solfege}</span>` : ''}
+          <span class="music-chip">個別面談・相談希望 ${m.consult}</span>
+          ${m.hasGeneralOs ? `<span class="music-chip">同日の普通科OSにも参加 ${m.generalOs}</span>` : ''}`)}
         ${item('知ったきっかけ', chips(m.channels))}
         ${item('中学校', chips(m.schools))}
       </div>
@@ -1306,7 +1348,7 @@ function renderUploadPanel(onUploaded) {
       <div class="upload-event-group">
         <div class="upload-event-header">
           <span class="upload-event-date">${escapeHtml(ev.uploadTitle || ev.label)}</span>
-          ${past ? '' : `<span class="upload-event-goal" id="goal-badge-${ev.key}">目標${config.goals[ev.key] || ev.defaultGoal}人</span>`}
+          ${past || ev.musicOnly ? '' : `<span class="upload-event-goal" id="goal-badge-${ev.key}">目標${config.goals[ev.key] || ev.defaultGoal}人</span>`}
         </div>
         <div class="upload-files-grid${grid}">${ev.csvSlots.map(zone).join('')}</div>
       </div>`;

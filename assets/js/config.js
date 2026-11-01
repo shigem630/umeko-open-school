@@ -61,6 +61,20 @@ const EVENTS_BY_YEAR = {
       defaultGoal: 20
     },
     {
+      // 音楽科の行事だけの回。普通科のカード・目標・新規来校者には含めず、「🎹 音楽科」の欄で集計する
+      key:      '1121',
+      label:    '11月21日',
+      fullLabel:'音楽科受験講習会（11/21）',
+      uploadTitle: '11月21日（音楽科受験講習会）',
+      date:     '2026-11-21',
+      csvSlots: [
+        { id: '1121_music', label: '音楽科受験講習会CSV', uploadLabel: '音楽科CSV（受験講習会）', type: 'music' }
+      ],
+      combined: false,
+      musicOnly: true,
+      musicLabel: '音楽科受験講習会'
+    },
+    {
       key:      '1128',
       label:    '11月28日',
       fullLabel:'第4回オープンスクール（11/28 中学生）',
