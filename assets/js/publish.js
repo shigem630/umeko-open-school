@@ -46,6 +46,7 @@ function buildExportData() {
     slots,
     annotations: getAnnotations(),
     approvedComments: getApprovedComments(),
+    postSurveys: buildPublicPostSurveys(),  // Formsの事後アンケート（集計＋公開にした自由記述だけ）
     goals: config.goals,
     newVisitorGoal: config.newVisitorGoal || 320
   };
@@ -62,6 +63,7 @@ function importPublishedIntoLocal(data) {
   }
   if (data.annotations)       saveAnnotations(data.annotations);
   if (data.approvedComments)  saveApprovedComments(data.approvedComments);
+  if (data.postSurveys)       safeSet('post_surveys_published', data.postSurveys);
   if (data.examShared)        safeSet('exam_shared', data.examShared);  // 暗号化済みの入試データ（閲覧用パスワードで復号）
   const config = getConfig();
   if (data.goals)          config.goals = { ...config.goals, ...data.goals };

@@ -1232,3 +1232,40 @@ body.view-only .admin-only { display: none !important; }
 .ms-row:hover { background: var(--color-gray-50, #FAFAFA); }
 .ms-date { color: var(--color-primary); font-weight: 700; }
 .ms-sub { font-size: var(--text-xs); color: var(--color-gray-600); }
+
+/* ===== 事後アンケート（Formsで回収）===== */
+.fs-source { font-size: var(--text-xs); color: var(--color-gray-500); margin-top: 4px; }
+.fs-card { margin-top: var(--space-4); }
+.fs-note { font-size: var(--text-xs); color: var(--color-gray-500); margin-bottom: var(--space-2); }
+.fs-empty { color: var(--color-gray-400); font-size: var(--text-sm); }
+.fs-staff-badge { font-size: 10px; font-weight: 700; color: #6B5200; background: #FFF1C2; border-radius: 999px; padding: 1px 8px; margin-left: 8px; vertical-align: 2px; }
+.fs-bars { display: flex; flex-direction: column; gap: 6px; }
+.fs-bar-row { display: grid; grid-template-columns: minmax(0, 15em) minmax(60px, 1fr) 6.5em; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.fs-bar-label { color: var(--color-gray-700); line-height: 1.35; }
+.fs-bar-track { background: var(--color-gray-100); border-radius: 4px; height: 18px; overflow: hidden; }
+.fs-bar-fill { height: 100%; border-radius: 4px; min-width: 2px; }
+.fs-bar-num { text-align: right; white-space: nowrap; color: var(--color-gray-700); }
+.fs-bar-num strong { font-size: var(--text-base); margin-right: 1px; }
+.fs-bar-num span { font-size: var(--text-xs); color: var(--color-gray-400); margin-left: 4px; }
+.fs-matrix-wrap { overflow-x: auto; }
+.fs-matrix { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.fs-matrix th { font-size: var(--text-xs); color: var(--color-gray-500); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--color-border); text-align: center; white-space: nowrap; }
+.fs-matrix th:first-child, .fs-matrix-name { text-align: left; }
+.fs-matrix th i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; vertical-align: 0; }
+.fs-matrix td { padding: 7px 6px; border-bottom: 1px solid var(--color-gray-100); text-align: center; white-space: nowrap; }
+.fs-matrix td.fs-matrix-name { text-align: left; font-weight: 600; color: var(--color-gray-800, #333); }
+.fs-matrix-rate strong { color: #1B5E20; font-size: var(--text-base); }
+.fs-matrix-rate small, .fs-matrix th small { color: var(--color-gray-400); font-weight: 400; margin-left: 2px; }
+.fs-zero { color: var(--color-gray-300, #ccc); }
+.fs-scale-summary { display: flex; gap: var(--space-4); flex-wrap: wrap; font-size: var(--text-sm); margin-bottom: var(--space-2); }
+.fs-scale-summary strong { font-size: var(--text-xl); color: var(--color-primary); margin: 0 2px; }
+.fs-scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; height: 140px; align-items: end; }
+.fs-scale-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.fs-scale-num { font-size: var(--text-xs); font-weight: 700; color: var(--color-gray-700); min-height: 1.2em; }
+.fs-scale-bar { width: 100%; max-width: 36px; border-radius: 4px 4px 0 0; min-height: 0; }
+.fs-scale-label { font-size: var(--text-xs); color: var(--color-gray-500); margin-top: 2px; }
+.fs-who { background: var(--color-gray-100); color: var(--color-gray-700); margin-right: 6px; }
+@media (max-width: 600px) {
+  .fs-bar-row { grid-template-columns: 1fr 5.5em; }
+  .fs-bar-label { grid-column: 1 / -1; }
+}

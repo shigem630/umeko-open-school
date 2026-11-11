@@ -80,10 +80,12 @@ async function buildSharedExamPayload() {
   });
   // 今年度の回の、生徒ページに出さない項目（塾名・受験の気持ちなど）
   const staffFields = collectStaffFields();
+  // Formsの事後アンケート（教職員のみの質問・非公開の自由記述も含む全部）
+  const postSurveys = { ...((_sharedExamData && _sharedExamData.postSurveys) || {}), ...getLocalPostSurveys() };
   const local = _getLocalExamData();
-  if (!local && !localPast && !hasStaffFields(staffFields)) return { shared: safeGet(EXAM_SHARED_KEY), note: '' };
+  if (!local && !localPast && !hasStaffFields(staffFields) && !Object.keys(getLocalPostSurveys()).length) return { shared: safeGet(EXAM_SHARED_KEY), note: '' };
   const base = local || _sharedExamData || _emptyExamData();
-  const rec = { version: 2, exams: base.exams || {}, visits: base.visits || {}, pastSlots, staffFields };
+  const rec = { version: 2, exams: base.exams || {}, visits: base.visits || {}, pastSlots, staffFields, postSurveys };
 
   // 閲覧用パスワードが変更されていたら、保存済みの鍵は使わず入力し直してもらう
   const saved = safeGet(EXAM_SHARE_KEY_KEY);
@@ -120,6 +122,7 @@ async function loadSharedExamRecords() {
     _sharedExamData = _migrateExamData(JSON.parse(new TextDecoder().decode(plain)));
     if (typeof setSharedSlotData === 'function') setSharedSlotData(_sharedExamData && _sharedExamData.pastSlots);
     if (typeof setSharedStaffFields === 'function') setSharedStaffFields(_sharedExamData && _sharedExamData.staffFields);
+    if (typeof setSharedPostSurveys === 'function') setSharedPostSurveys(_sharedExamData && _sharedExamData.postSurveys);
     return (_sharedExamStatus = _sharedExamData ? 'ok' : 'nodata');
   } catch (_) {
     return (_sharedExamStatus = 'fail');
@@ -289,6 +292,7 @@ async function importExamFiles(fileList) {
   const data = _getLocalExamData() || (_sharedExamData ? JSON.parse(JSON.stringify(_sharedExamData)) : _emptyExamData());
   delete data.pastSlots;  // 過去の年度の回のデータは data_<スロット> に保存する（入試データとは別）
   delete data.staffFields;
+  delete data.postSurveys;
   const now = new Date().toISOString();
 
   // 受験者一覧：入試区分（ファイル）ごとに置き換え

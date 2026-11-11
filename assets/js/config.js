@@ -43,6 +43,7 @@ const EVENTS_BY_YEAR = {
       csvSlots: [
         { id: '1107_elm', label: '小学生CSV', uploadLabel: '小学生CSV', type: 'elm' }
       ],
+      formsSurvey: true,  // BLENDの不具合で事後アンケートはFormsで回収（post-survey.js）
       combined: false,
       defaultGoal: 60
     },

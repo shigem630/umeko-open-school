@@ -1036,6 +1036,16 @@ function buildAfterPanelHTML(key) {
 }
 
 function renderPostEventPanel(eventKey) {
+  // BLEND以外（Forms）で回収した事後アンケートがあれば、そちらを表示する
+  const survey = getPostSurvey(eventKey);
+  if (survey) {
+    const afterPanel = document.querySelector('.phase-panel[data-phase="after"]');
+    if (afterPanel) {
+      afterPanel.innerHTML = buildPostSurveyHTML(eventKey, survey);
+      renderPostSurveyComments(eventKey, survey);
+    }
+    return;
+  }
   const rows = getEventRows(eventKey);
   const withSatisfaction = rows.filter(r => r.satisfaction && r.satisfaction.trim());
 
@@ -1295,6 +1305,11 @@ function setUploadState(zoneEl, state, label) {
 
 function restoreUploadStates() {
   EVENTS.forEach(event => {
+    if (event.formsSurvey) {
+      const zoneEl = document.getElementById('forms-zone-' + event.key);
+      const s = safeGet('post_survey_' + event.key);
+      if (zoneEl && s) setUploadState(zoneEl, 'loaded', `✓ ${s.total}件 読込済 (${formatDatetimeDisplay(s.imported_at)})`);
+    }
     event.csvSlots.forEach(slot => {
       const data = getEventData(slot.id);
       if (!data) return;
@@ -1342,15 +1357,26 @@ function renderUploadPanel(onUploaded) {
   wrap.innerHTML = (past ? `<p class="upload-year-note">📅 ${ACTIVE_YEAR}年度（過去の年度）の欄です。ここで読み込んだデータは生徒用ページには表示されず、「🚀 GitHubに公開」で入試データと一緒に暗号化して教職員に共有されます。</p>` : '')
     + bulk
     + EVENTS.map(ev => {
-      const n = ev.csvSlots.length;
+      const forms = ev.formsSurvey && !past;
+      const n = ev.csvSlots.length + (forms ? 1 : 0);
       const grid = n >= 3 ? ' with-music' : n === 1 ? ' single-file' : '';
+      const formsZone = forms ? `
+        <div>
+          <p style="${_UPLOAD_LABEL_STYLE}">事後アンケート（Microsoft Forms の .xlsx）</p>
+          <label class="upload-zone" id="forms-zone-${ev.key}">
+            <input type="file" accept=".xlsx,.csv">
+            <div class="upload-zone-icon">📝</div>
+            <div class="upload-zone-label">クリックまたはドラッグ&ドロップ</div>
+            <div class="upload-zone-hint">.xlsxファイル（氏名は保存しません）</div>
+          </label>
+        </div>` : '';
       return `
       <div class="upload-event-group">
         <div class="upload-event-header">
           <span class="upload-event-date">${escapeHtml(ev.uploadTitle || ev.label)}</span>
           ${past || ev.musicOnly ? '' : `<span class="upload-event-goal" id="goal-badge-${ev.key}">目標${config.goals[ev.key] || ev.defaultGoal}人</span>`}
         </div>
-        <div class="upload-files-grid${grid}">${ev.csvSlots.map(zone).join('')}</div>
+        <div class="upload-files-grid${grid}">${ev.csvSlots.map(zone).join('')}${formsZone}</div>
       </div>`;
     }).join('');
 
@@ -1358,6 +1384,22 @@ function renderUploadPanel(onUploaded) {
     const z = wrap.querySelector(`[data-slot="${slot.id}"]`);
     if (z) setupUploadZone(z, slot.id, event.key, onUploaded);
   }));
+  // 事後アンケート（Forms）の読込欄
+  EVENTS.filter(e => e.formsSurvey).forEach(event => {
+    const z = wrap.querySelector('#forms-zone-' + event.key);
+    if (!z) return;
+    const input = z.querySelector('input[type="file"]');
+    const go = file => importPostSurveyFile(file, event.key, key => {
+      setUploadState(z, 'loaded', `✓ ${getPostSurvey(key).total}件 読込済 (${formatDatetimeDisplay(getPostSurvey(key).imported_at)})`);
+      onUploaded && onUploaded(key);
+      if (typeof currentEventKey !== 'undefined' && currentEventKey === key) renderPostEventPanel(key);
+    });
+    z.addEventListener('click', () => input.click());
+    z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('drag-over'); });
+    z.addEventListener('dragleave', () => z.classList.remove('drag-over'));
+    z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('drag-over'); if (e.dataTransfer.files[0]) go(e.dataTransfer.files[0]); });
+    input.addEventListener('change', () => { if (input.files[0]) go(input.files[0]); input.value = ''; });
+  });
   const bulkZone = document.getElementById('bulk-upload-zone');
   if (bulkZone) {
     const input = bulkZone.querySelector('input[type="file"]');
